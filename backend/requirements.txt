@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+pandas
+yfinance
+scikit-learn
+numpy
+pyotp
+smartapi-python
+python-dotenv
+requests
+websocket-client
+ijson
+vaderSentiment
+logzero
+joblib
+scipy
+httpx
