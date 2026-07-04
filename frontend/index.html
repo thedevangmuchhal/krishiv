@@ -429,20 +429,113 @@
         }
 
         /* ═══════════════════════════════════════════
-           MAIN TWO-COLUMN GRID
+           SECTION SYSTEM — Dashboard Zone Layout
            ═══════════════════════════════════════════ */
-        .main-grid {
+        .dashboard-section {
+            margin-bottom: 1.75rem;
+        }
+
+        .section-header {
+            font-size: 0.65rem;
+            color: var(--fog);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            border-left: 3px solid var(--ember);
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.06), transparent);
+            border-radius: 0 6px 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .signals-command-center {
             display: grid;
-            grid-template-columns: 7fr 5fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
             margin-bottom: 1rem;
         }
 
-        @media (max-width: 768px) {
-            .main-grid {
+        .signal-card {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem;
+            border-top: 3px solid transparent;
+            overflow: hidden;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .signal-card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .signal-card-legacy {
+            border-top-color: var(--bull);
+        }
+
+        .signal-card-ml {
+            border-top-color: var(--purple);
+        }
+
+        .signal-card-btst {
+            border-top-color: var(--ember);
+        }
+
+        .signal-card-label {
+            font-size: 0.6rem;
+            color: var(--fog);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            text-align: center;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .gauge-scores-row {
+            display: flex;
+            gap: 1.25rem;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .gauge-scores-row .gauge-container {
+            flex-shrink: 0;
+            margin-bottom: 0;
+        }
+
+        .gauge-scores-row .score-breakdown {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .chart-tech-grid {
+            display: grid;
+            grid-template-columns: 7fr 5fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            .signals-command-center {
                 grid-template-columns: 1fr;
             }
 
+            .gauge-scores-row {
+                flex-direction: column;
+            }
+
+            .chart-tech-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
             .sticky-header {
                 flex-wrap: wrap;
                 padding: 0.5rem 1rem;
@@ -457,7 +550,6 @@
                 font-size: 1.3rem;
             }
 
-            /* Make the right header elements wrap nicely */
             .header-right {
                 width: 100%;
                 flex-wrap: wrap;
@@ -471,6 +563,10 @@
                 flex-wrap: wrap;
                 justify-content: center;
                 gap: 0.5rem;
+            }
+
+            .levels {
+                grid-template-columns: repeat(3, 1fr);
             }
         }
 
@@ -505,7 +601,7 @@
             text-align: center;
             border: 1px solid var(--rim);
             transition: all 0.4s ease;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .signal-box.buy {
@@ -551,7 +647,7 @@
 
         .action-text {
             font-family: 'Inter', sans-serif;
-            font-size: 2.4rem;
+            font-size: 2rem;
             font-weight: 800;
             line-height: 1;
             letter-spacing: 2px;
@@ -567,12 +663,12 @@
 
         .wait .action-text {
             color: var(--fog);
-            font-size: 1.8rem;
+            font-size: 1.6rem;
         }
 
         .strike-text {
             font-family: 'DM Mono', monospace;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin-top: 0.4rem;
             font-weight: 500;
             color: var(--text-secondary);
@@ -1206,10 +1302,6 @@
             .stats-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
-
-            .levels {
-                grid-template-columns: repeat(3, 1fr);
-            }
         }
 
         .stat-card {
@@ -1335,57 +1427,6 @@
            ═══════════════════════════════════════════ */
         .logger-panel {
             margin-bottom: 1rem;
-        }
-
-        .logger-url-row {
-            display: flex;
-            gap: 0.4rem;
-            margin-bottom: 0.6rem;
-        }
-
-        .logger-url-input {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
-            border-radius: 6px;
-            padding: 0.4rem 0.6rem;
-            color: var(--text-primary);
-            font-size: 0.65rem;
-            font-family: 'DM Mono', monospace;
-            outline: none;
-        }
-
-        .logger-url-input::placeholder {
-            color: var(--fog);
-            opacity: 0.5;
-        }
-
-        .logger-url-input:focus {
-            border-color: var(--accent);
-        }
-
-        .logger-btn {
-            padding: 0.4rem 0.8rem;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .logger-btn.start {
-            background: linear-gradient(135deg, #059669, #10B981);
-            color: white;
-        }
-
-        .logger-btn.stop {
-            background: linear-gradient(135deg, #DC2626, #EF4444);
-            color: white;
-        }
-
-        .logger-btn:hover {
-            transform: translateY(-1px);
         }
 
         .logger-status-grid {
@@ -1593,7 +1634,7 @@
         }
 
         /* ═══════════════════════════════════════════
-           STAT SECTION HEADERS
+           STAT SECTION HEADERS (legacy compat)
            ═══════════════════════════════════════════ */
         .stat-section {
             margin-bottom: 1rem;
@@ -1723,182 +1764,91 @@
 
         <div id="content" style="display:none;">
 
-            <!-- ═══════ TWO-COLUMN LAYOUT ═══════ -->
-            <div class="main-grid">
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 1: TRADE SIGNALS COMMAND CENTER
+                 ═══════════════════════════════════════════════════════════════ -->
+            <section class="dashboard-section">
+                <div class="section-header">🎯 TRADE SIGNALS</div>
 
-                <!-- LEFT COLUMN: Chart + MTF + OI -->
-                <div class="left-col">
+                <div class="signals-command-center">
 
-                    <!-- Chart Card with TF Tabs -->
-                    <div class="card" style="margin-bottom: 1rem;">
-                        <div
-                            style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
-                            <div class="card-title" id="chartTitle" style="margin-bottom:0;">Price Action — 15m Candles
-                            </div>
-                            <div class="tf-tabs" id="tfTabs">
-                                <button class="tf-tab" data-tf="5m" onclick="switchTimeframe('5m')">5m</button>
-                                <button class="tf-tab active" data-tf="15m"
-                                    onclick="switchTimeframe('15m')">15m</button>
-                                <button class="tf-tab" data-tf="30m" onclick="switchTimeframe('30m')">30m</button>
-                                <button class="tf-tab" data-tf="1h" onclick="switchTimeframe('1h')">1h</button>
-                            </div>
+                    <!-- ── LEGACY AI SIGNAL ── -->
+                    <div class="signal-card signal-card-legacy">
+                        <div class="signal-card-label">LEGACY AI SIGNAL</div>
+                        <div id="signalBox" class="signal-box wait">
+                            <h2 id="actionText" class="action-text">WAIT</h2>
+                            <div id="strikeText" class="strike-text">No trade recommended</div>
                         </div>
-                        <div id="priceChart"></div>
-                    </div>
-
-                    <!-- MTF Confluence Table -->
-                    <div class="card" id="mtfTableCard" style="margin-bottom: 1rem;">
-                        <div class="card-title">Multi-Timeframe Confluence</div>
-                        <table class="mtf-table" id="mtfTable">
-                            <thead>
-                                <tr>
-                                    <th>TF</th>
-                                    <th>Trend</th>
-                                    <th>RSI</th>
-                                    <th>Supertrend</th>
-                                    <th>Stoch K</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mtfTableBody">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- OI Chart -->
-                    <div class="card" id="oiChartCard" style="display: none;">
-                        <div class="card-title">Open Interest — Strike-wise</div>
-                        <div id="oiChart"></div>
-                        <div class="atm-premium-row" id="atmPremiumRow">
-                            <div class="atm-premium-item">
-                                <div class="atm-premium-label">ATM CE Premium</div>
-                                <div class="atm-premium-val" id="atmCeLtp" style="color: var(--bear);">--</div>
+                        <div class="signal-strength-container">
+                            <span class="signal-strength-label">Strength</span>
+                            <div class="signal-strength-bar">
+                                <div id="signalStrengthFill" class="signal-strength-fill" style="width:0%"></div>
                             </div>
-                            <div class="atm-premium-item">
-                                <div class="atm-premium-label">ATM PE Premium</div>
-                                <div class="atm-premium-val" id="atmPeLtp" style="color: var(--bull);">--</div>
-                            </div>
+                            <span id="signalStrengthVal" class="signal-strength-val">0</span>
                         </div>
-                    </div>
-                </div>
-
-                <!-- RIGHT COLUMN: Signal + Gauge + Scores + Levels + Paper Trade -->
-                <div class="right-col">
-
-                    <!-- Signal Box -->
-                    <div id="signalBox" class="signal-box wait">
-                        <h2 id="actionText" class="action-text">WAIT</h2>
-                        <div id="strikeText" class="strike-text">No trade recommended</div>
-                    </div>
-
-                    <!-- 💳 TRADE CARD 💳 -->
-                    <div class="card" id="tradeCardBox" style="margin-bottom: 1rem; display: none;">
-                        <div class="card-title" style="display:flex; align-items:center; gap:0.5rem; justify-content:center;">
-                            💳 LIVE TRADE CARD
-                        </div>
-                        <div style="text-align: center; margin-bottom: 0.8rem;">
-                            <div style="font-size: 0.65rem; color: var(--fog); text-transform: uppercase;">Entry</div>
-                            <div id="tcEntry" style="font-size: 1.4rem; font-weight: 800; color: var(--bull);">--</div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.8rem; margin-bottom: 0.8rem;">
-                            <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase;">Best Entry</div>
-                                <div id="tcPrice" style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">--</div>
+                        <!-- Live Trade Card -->
+                        <div id="tradeCardBox" style="display: none; padding-top: 0.5rem; border-top: 1px solid var(--glass-border);">
+                            <div style="font-size:0.6rem; color:var(--fog); text-transform:uppercase; letter-spacing:1.5px; font-weight:600; text-align:center; margin-bottom:0.5rem;">💳 LIVE TRADE CARD</div>
+                            <div style="text-align: center; margin-bottom: 0.6rem;">
+                                <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase;">Entry</div>
+                                <div id="tcEntry" style="font-size: 1.2rem; font-weight: 800; color: var(--bull);">--</div>
                             </div>
-                            <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase;">Target Price</div>
-                                <div id="tcTargetPrice" style="font-size: 1.1rem; font-weight: 700; color: var(--bull);">--</div>
-                            </div>
-                            <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase;">SL Price</div>
-                                <div id="tcSLPrice" style="font-size: 1.1rem; font-weight: 700; color: var(--bear);">--</div>
-                            </div>
-                            <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase;">Index Target</div>
-                                <div id="tcTarget" style="font-size: 1.1rem; font-weight: 700; color: var(--bull);">--</div>
-                            </div>
-                            <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase;">Index SL</div>
-                                <div id="tcSL" style="font-size: 1.1rem; font-weight: 700; color: var(--bear);">--</div>
-                            </div>
-                            <div style="text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px;">
-                                <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase;">Confidence</div>
-                                <div id="tcConfidence" style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">--</div>
-                            </div>
-                        </div>
-                        <div style="font-size: 0.65rem; color: var(--fog); text-align: center;">
-                            Last Backtested This Model : <span id="tcBacktested" style="font-weight:700;">--</span>
-                        </div>
-                    </div>
-
-                    <!-- 🌙 BTST SIGNAL CARD 🌙 -->
-                    <div class="card" id="btstCard" style="margin-bottom: 1rem; display: none;">
-                        <div class="card-title" style="display:flex; align-items:center; gap:0.5rem;">
-                            BTST (Overnight) Signal
-                        </div>
-                        <div id="btstSignalBox"
-                            style="padding: 0.5rem 0.8rem; border-radius: 8px; margin-bottom: 0.6rem; text-align: center; font-weight: 700; font-size: 0.95rem;">
-                            --
-                        </div>
-                        <div
-                            style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
-                            <div style="text-align: center;">
-                                <div
-                                    style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase; letter-spacing:1px;">
-                                    Entry</div>
-                                <div id="btstEntry" style="font-size: 0.85rem; font-weight: 600;">--</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div
-                                    style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase; letter-spacing:1px;">
-                                    Target</div>
-                                <div id="btstTarget" style="font-size: 0.85rem; font-weight: 600; color: var(--bull);">
-                                    --</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div
-                                    style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase; letter-spacing:1px;">
-                                    SL</div>
-                                <div id="btstSL" style="font-size: 0.85rem; font-weight: 600; color: var(--bear);">--
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; margin-bottom: 0.5rem;">
+                                <div style="text-align: center; padding: 0.35rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                                    <div style="font-size: 0.5rem; color: var(--fog); text-transform: uppercase;">Best Entry</div>
+                                    <div id="tcPrice" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">--</div>
+                                </div>
+                                <div style="text-align: center; padding: 0.35rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                                    <div style="font-size: 0.5rem; color: var(--fog); text-transform: uppercase;">Target Price</div>
+                                    <div id="tcTargetPrice" style="font-size: 0.85rem; font-weight: 700; color: var(--bull);">--</div>
+                                </div>
+                                <div style="text-align: center; padding: 0.35rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                                    <div style="font-size: 0.5rem; color: var(--fog); text-transform: uppercase;">SL Price</div>
+                                    <div id="tcSLPrice" style="font-size: 0.85rem; font-weight: 700; color: var(--bear);">--</div>
+                                </div>
+                                <div style="text-align: center; padding: 0.35rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                                    <div style="font-size: 0.5rem; color: var(--fog); text-transform: uppercase;">Confidence</div>
+                                    <div id="tcConfidence" style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">--</div>
                                 </div>
                             </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; margin-bottom: 0.4rem;">
+                                <div style="text-align: center; padding: 0.35rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                                    <div style="font-size: 0.5rem; color: var(--fog); text-transform: uppercase;">Index Target</div>
+                                    <div id="tcTarget" style="font-size: 0.85rem; font-weight: 700; color: var(--bull);">--</div>
+                                </div>
+                                <div style="text-align: center; padding: 0.35rem; background: rgba(255,255,255,0.02); border-radius: 6px;">
+                                    <div style="font-size: 0.5rem; color: var(--fog); text-transform: uppercase;">Index SL</div>
+                                    <div id="tcSL" style="font-size: 0.85rem; font-weight: 700; color: var(--bear);">--</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.55rem; color: var(--fog); text-align: center;">
+                                Last Backtested : <span id="tcBacktested" style="font-weight:700;">--</span>
+                            </div>
                         </div>
-                        <div id="btstConfidence"
-                            style="font-size: 0.7rem; color: var(--fog); text-align: center; margin-bottom: 0.4rem;">
-                            Confidence: --</div>
-                        <ul class="signal-reasons-list" id="btstReasonsList">
-                            <li style="color:var(--fog)">Waiting for BTST analysis...</li>
-                        </ul>
                     </div>
 
-                    <!-- ── MACHINE LEARNING (SHADOW MODE) ── -->
-                    <div class="stat-section" style="margin-bottom: 1rem;">
-                        <div class="stat-section-title">Machine Learning Prediction (Shadow Mode)</div>
-                        <div class="card" id="mlCard">
-                            <div
-                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                    <!-- ── ML PREDICTION ── -->
+                    <div class="signal-card signal-card-ml">
+                        <div class="signal-card-label">ML PREDICTION (SHADOW)</div>
+                        <div id="mlCard">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
                                 <span style="font-size:0.75rem; color:var(--fog)">AI Confidence:</span>
-                                <span id="mlProbability"
-                                    style="font-size:1.2rem; font-weight:700; color:var(--ember)">--%</span>
+                                <span id="mlProbability" style="font-size:1.2rem; font-weight:700; color:var(--ember)">--%</span>
                             </div>
-                            <div
-                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
                                 <span style="font-size:0.75rem; color:var(--fog)">ML Signal:</span>
-                                <span id="mlPrediction"
-                                    style="font-size:0.85rem; font-weight:600; padding: 2px 6px; border-radius:4px; background:rgba(255,255,255,0.1)">WAITING</span>
+                                <span id="mlPrediction" style="font-size:0.85rem; font-weight:600; padding: 2px 6px; border-radius:4px; background:rgba(255,255,255,0.1)">WAITING</span>
                             </div>
-                            <div
-                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
                                 <span style="font-size:0.75rem; color:var(--fog)">Recommended Strike:</span>
-                                <span id="mlStrike"
-                                    style="font-size:0.85rem; font-weight:600; color:var(--text-primary)">--</span>
+                                <span id="mlStrike" style="font-size:0.85rem; font-weight:600; color:var(--text-primary)">--</span>
                             </div>
-                            <div style="font-size:0.55rem; color:var(--fog); text-align:right;">
+                            <div style="font-size:0.55rem; color:var(--fog); text-align:right; margin-bottom: 0.6rem;">
                                 Status: <span id="mlStatus">Untrained</span>
                             </div>
-                            <!-- ── Multi-Strategy Risk Profiles (Phase 5) ── -->
-                            <div id="multiSignalsBox" style="margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
-                                <div style="font-size: 0.65rem; color: var(--fog); margin-bottom: 0.35rem; font-weight: 600; letter-spacing: 0.5px;">RISK PROFILES</div>
+                            <!-- Risk Profiles -->
+                            <div id="multiSignalsBox" style="padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                                <div style="font-size: 0.6rem; color: var(--fog); margin-bottom: 0.35rem; font-weight: 600; letter-spacing: 0.5px;">RISK PROFILES</div>
                                 <div id="multiSignalsList" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem;">
                                     <div class="ms-label" id="ms-safe" style="font-size:0.7rem; padding:4px 6px; border-radius:4px; background:rgba(255,255,255,0.04); display:flex; align-items:center; gap:4px;">
                                         <span style="color:#4ade80; font-size:0.8rem;">&#x1F7E2;</span>
@@ -1925,67 +1875,84 @@
                         </div>
                     </div>
 
-                    <!-- Signal Strength Meter -->
-                    <div class="signal-strength-container">
-                        <span class="signal-strength-label">Signal Strength</span>
-                        <div class="signal-strength-bar">
-                            <div id="signalStrengthFill" class="signal-strength-fill" style="width:0%"></div>
+                    <!-- ── BTST OVERNIGHT SIGNAL ── -->
+                    <div class="signal-card signal-card-btst">
+                        <div class="signal-card-label">BTST OVERNIGHT</div>
+                        <div id="btstCard">
+                            <div id="btstSignalBox"
+                                style="padding: 0.5rem 0.8rem; border-radius: 8px; margin-bottom: 0.6rem; text-align: center; font-weight: 700; font-size: 0.95rem;">
+                                --
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase; letter-spacing:1px;">Entry</div>
+                                    <div id="btstEntry" style="font-size: 0.85rem; font-weight: 600;">--</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase; letter-spacing:1px;">Target</div>
+                                    <div id="btstTarget" style="font-size: 0.85rem; font-weight: 600; color: var(--bull);">--</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 0.6rem; color: var(--fog); text-transform: uppercase; letter-spacing:1px;">SL</div>
+                                    <div id="btstSL" style="font-size: 0.85rem; font-weight: 600; color: var(--bear);">--</div>
+                                </div>
+                            </div>
+                            <div id="btstConfidence" style="font-size: 0.7rem; color: var(--fog); text-align: center; margin-bottom: 0.4rem;">
+                                Confidence: --</div>
+                            <ul class="signal-reasons-list" id="btstReasonsList">
+                                <li style="color:var(--fog)">Waiting for BTST analysis...</li>
+                            </ul>
                         </div>
-                        <span id="signalStrengthVal" class="signal-strength-val">0</span>
                     </div>
 
-                    <!-- Expected Move -->
-                    <div class="expected-move">
-                        <div class="expected-move-item">
-                            <div class="expected-move-lbl">Expected Low</div>
-                            <div id="expectedMoveLow" class="expected-move-val" style="color:var(--bear);">--</div>
-                        </div>
-                        <div class="expected-move-item">
-                            <div class="expected-move-lbl">R:R Ratio</div>
-                            <div id="riskRewardVal" class="expected-move-val" style="color:var(--ember);">--</div>
-                        </div>
-                        <div class="expected-move-item">
-                            <div class="expected-move-lbl">Expected High</div>
-                            <div id="expectedMoveHigh" class="expected-move-val" style="color:var(--bull);">--</div>
-                        </div>
-                    </div>
+                </div><!-- /signals-command-center -->
 
-                    <!-- Signal Insight -->
-                    <div class="signal-insight" id="signalInsight">
-                        Scanning market conditions…
-                    </div>
+                <!-- Signal Insight (full width) -->
+                <div class="signal-insight" id="signalInsight">
+                    Scanning market conditions…
+                </div>
 
-                    <!-- Arc Confidence Gauge -->
+                <!-- Expected Move -->
+                <div class="expected-move">
+                    <div class="expected-move-item">
+                        <div class="expected-move-lbl">Expected Low</div>
+                        <div id="expectedMoveLow" class="expected-move-val" style="color:var(--bear);">--</div>
+                    </div>
+                    <div class="expected-move-item">
+                        <div class="expected-move-lbl">R:R Ratio</div>
+                        <div id="riskRewardVal" class="expected-move-val" style="color:var(--ember);">--</div>
+                    </div>
+                    <div class="expected-move-item">
+                        <div class="expected-move-lbl">Expected High</div>
+                        <div id="expectedMoveHigh" class="expected-move-val" style="color:var(--bull);">--</div>
+                    </div>
+                </div>
+
+                <!-- Gauge + Score Breakdown side-by-side -->
+                <div class="gauge-scores-row">
                     <div class="gauge-container">
                         <svg class="gauge-svg" id="gaugeArc" viewBox="0 0 200 115">
-                            <!-- Background arc -->
                             <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.04)"
                                 stroke-width="10" stroke-linecap="round" />
-                            <!-- Coloured arc (filled portion) -->
                             <path id="gaugeFill" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--fog)"
                                 stroke-width="10" stroke-linecap="round" stroke-dasharray="251.3"
                                 stroke-dashoffset="251.3"
                                 style="transition: stroke-dashoffset 1s ease, stroke 0.5s ease;" />
-                            <!-- Needle -->
                             <line id="gaugeNeedle" x1="100" y1="100" x2="100" y2="30" stroke="var(--text-primary)"
                                 stroke-width="2" stroke-linecap="round"
                                 style="transform-origin: 100px 100px; transition: transform 1s ease;" />
                             <circle cx="100" cy="100" r="4" fill="var(--text-primary)" />
-                            <!-- Value text -->
                             <text id="gaugeValue" x="100" y="85" text-anchor="middle" font-family="'DM Mono', monospace"
                                 font-size="24" font-weight="500" fill="var(--text-primary)">--</text>
                             <text id="gaugeLabel" x="100" y="100" text-anchor="middle" font-family="'Inter', sans-serif"
                                 font-size="9" font-weight="700" fill="var(--fog)" letter-spacing="1.5">NEUTRAL</text>
-                            <!-- Min / Max labels -->
                             <text x="18" y="112" text-anchor="middle" font-family="'DM Mono', monospace" font-size="8"
                                 fill="var(--fog)">0</text>
                             <text x="182" y="112" text-anchor="middle" font-family="'DM Mono', monospace" font-size="8"
                                 fill="var(--fog)">100</text>
                         </svg>
                     </div>
-
-                    <!-- Score Breakdown -->
-                    <div class="card score-breakdown" style="margin-bottom: 1rem;">
+                    <div class="card score-breakdown">
                         <div class="score-row">
                             <div class="score-label">Smart Money</div>
                             <div class="score-bar-bg">
@@ -2015,128 +1982,17 @@
                             <div id="valSentiment" class="score-val">50</div>
                         </div>
                     </div>
-
-                    <!-- Trade Levels -->
-                    <div class="levels">
-                        <div class="level">
-                            <div class="level-label">Entry</div>
-                            <div id="entryVal" class="level-val">--</div>
-                        </div>
-                        <div class="level">
-                            <div class="level-label">Target</div>
-                            <div id="targetVal" class="level-val" style="color:var(--bull)">--</div>
-                        </div>
-                        <div class="level">
-                            <div class="level-label">Stop Loss</div>
-                            <div id="stopVal" class="level-val" style="color:var(--bear)">--</div>
-                        </div>
-                        <div class="level">
-                            <div class="level-label">Price</div>
-                            <div id="priceVal" class="level-val" style="color:var(--ember)">--</div>
-                        </div>
-                        <div class="level">
-                            <div class="level-label">R:R</div>
-                            <div id="rrLevelVal" class="level-val" style="color:var(--purple)">--</div>
-                        </div>
-                    </div>
-
-                    <!-- ═══════ PAPER TRADING PANEL ═══════ -->
-                    <div class="card paper-trade-panel">
-                        <div class="card-title">Paper Trading</div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                            <div style="display:flex; flex-direction:column; gap:0.2rem;">
-                                <label style="font-size:0.65rem; color:var(--fog);">Capital (₹)</label>
-                                <input type="number" id="capitalInput" value="100000" onchange="calculatePositionSize()"
-                                    style="width:70px; background:var(--background); border:1px solid var(--glass-border); color:var(--text); border-radius:4px; padding:2px 4px;">
-                            </div>
-                            <div style="display:flex; flex-direction:column; gap:0.2rem;">
-                                <label style="font-size:0.65rem; color:var(--fog);">Risk %</label>
-                                <input type="number" id="riskInput" value="2" step="0.5" max="10"
-                                    onchange="calculatePositionSize()"
-                                    style="width:50px; background:var(--background); border:1px solid var(--glass-border); color:var(--text); border-radius:4px; padding:2px 4px;">
-                            </div>
-                            <div style="display:flex; flex-direction:column; gap:0.2rem;">
-                                <label style="font-size:0.65rem; color:var(--fog);">Lot Size</label>
-                                <input type="number" id="lotSizeInput" value="25" min="1" max="5000"
-                                    style="width:50px; background:var(--background); border:1px solid var(--glass-border); color:var(--text); border-radius:4px; padding:2px 4px;"
-                                    readonly title="Auto-calculated based on Risk">
-                            </div>
-                        </div>
-                        <div style="font-size:0.6rem; color:var(--fog); text-align:right; margin-bottom:0.5rem;">
-                            ATM: <strong id="paperAtmStrike">--</strong>
-                        </div>
-                        <div class="trade-buttons">
-                            <button class="trade-btn buy-ce" id="buyCeBtn" onclick="executePaperTrade('CE')" disabled>
-                                BUY CE
-                                <span class="trade-btn-price" id="buyCePrice">₹ --</span>
-                            </button>
-                            <button class="trade-btn buy-pe" id="buyPeBtn" onclick="executePaperTrade('PE')" disabled>
-                                BUY PE
-                                <span class="trade-btn-price" id="buyPePrice">₹ --</span>
-                            </button>
-                        </div>
-
-                        <!-- Trade Tabs -->
-                        <div class="trade-tabs">
-                            <button class="trade-tab active" onclick="switchTradeView('open')">Open Positions</button>
-                            <button class="trade-tab" onclick="switchTradeView('closed')">Trade History</button>
-                        </div>
-
-                        <!-- Open Positions -->
-                        <div id="openTradesView">
-                            <table class="paper-trades-table">
-                                <thead>
-                                    <tr>
-                                        <th>Type</th>
-                                        <th>Strike</th>
-                                        <th>Entry</th>
-                                        <th>Lots</th>
-                                        <th>P&L</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="openTradesBody">
-                                    <tr>
-                                        <td colspan="6" style="color:var(--fog); padding:1rem;">No open positions</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div class="total-pnl-row">
-                                <span class="total-pnl-label">Total Open P&L</span>
-                                <span id="totalOpenPnl" class="total-pnl-val" style="color:var(--fog);">₹0.00</span>
-                            </div>
-                        </div>
-
-                        <!-- Trade History (hidden by default) -->
-                        <div id="closedTradesView" style="display:none;">
-                            <table class="paper-trades-table">
-                                <thead>
-                                    <tr>
-                                        <th>Type</th>
-                                        <th>Strike</th>
-                                        <th>Entry</th>
-                                        <th>Exit</th>
-                                        <th>P&L</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="closedTradesBody">
-                                    <tr>
-                                        <td colspan="5" style="color:var(--fog); padding:1rem;">No closed trades</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div class="total-pnl-row">
-                                <span class="total-pnl-label">Total Realized P&L</span>
-                                <span id="totalClosedPnl" class="total-pnl-val" style="color:var(--fog);">₹0.00</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- ═══════ OPTIONS FLOW ═══════ -->
-            <div class="stat-section">
-                <div class="stat-section-title">Options Flow</div>
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 2: OI DATA & OPTIONS ANALYSIS
+                 ═══════════════════════════════════════════════════════════════ -->
+            <section class="dashboard-section">
+                <div class="section-header">📊 OI DATA & OPTIONS ANALYSIS</div>
+
+                <!-- Options Flow Stats -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-label">PCR (OI / Vol)</div>
@@ -2179,60 +2035,146 @@
                         <div id="sentimentVal" class="stat-value">--</div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ═══════ TECHNICALS ═══════ -->
-            <div class="stat-section">
-                <div class="stat-section-title">Technical Indicators</div>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Trend</div>
-                        <div id="trendVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Pattern</div>
-                        <div id="patternVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">RSI</div>
-                        <div id="rsiVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Stoch RSI (K/D)</div>
-                        <div id="stochRsiVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">RSI Divergence</div>
-                        <div id="rsiDivVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Supertrend</div>
-                        <div id="supertrendVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Volume Surge</div>
-                        <div id="volSurgeVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">MTF Confluence</div>
-                        <div id="mtfVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">FII Net</div>
-                        <div id="fiiVal" class="stat-value">--</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">DII Net</div>
-                        <div id="diiVal" class="stat-value">--</div>
+                <!-- OI Strike Chart -->
+                <div class="card" id="oiChartCard" style="display: none;">
+                    <div class="card-title">Open Interest — Strike-wise</div>
+                    <div id="oiChart"></div>
+                    <div class="atm-premium-row" id="atmPremiumRow">
+                        <div class="atm-premium-item">
+                            <div class="atm-premium-label">ATM CE Premium</div>
+                            <div class="atm-premium-val" id="atmCeLtp" style="color: var(--bear);">--</div>
+                        </div>
+                        <div class="atm-premium-item">
+                            <div class="atm-premium-label">ATM PE Premium</div>
+                            <div class="atm-premium-val" id="atmPeLtp" style="color: var(--bull);">--</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- ═══════ ADVANCED LEVELS ═══════ -->
-            <div class="stat-section">
-                <div class="stat-section-title">Advanced Levels</div>
-                <div class="advanced-levels-grid">
-                    <!-- Fibonacci -->
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 3: PRICE ACTION & TECHNICALS
+                 ═══════════════════════════════════════════════════════════════ -->
+            <section class="dashboard-section">
+                <div class="section-header">📈 PRICE ACTION & TECHNICALS</div>
+
+                <div class="chart-tech-grid">
+                    <!-- Left: Chart + MTF -->
+                    <div>
+                        <div class="card" style="margin-bottom: 1rem;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
+                                <div class="card-title" id="chartTitle" style="margin-bottom:0;">Price Action — 15m Candles</div>
+                                <div class="tf-tabs" id="tfTabs">
+                                    <button class="tf-tab" data-tf="5m" onclick="switchTimeframe('5m')">5m</button>
+                                    <button class="tf-tab active" data-tf="15m" onclick="switchTimeframe('15m')">15m</button>
+                                    <button class="tf-tab" data-tf="30m" onclick="switchTimeframe('30m')">30m</button>
+                                    <button class="tf-tab" data-tf="1h" onclick="switchTimeframe('1h')">1h</button>
+                                </div>
+                            </div>
+                            <div id="priceChart"></div>
+                        </div>
+
+                        <div class="card" id="mtfTableCard">
+                            <div class="card-title">Multi-Timeframe Confluence</div>
+                            <table class="mtf-table" id="mtfTable">
+                                <thead>
+                                    <tr>
+                                        <th>TF</th>
+                                        <th>Trend</th>
+                                        <th>RSI</th>
+                                        <th>Supertrend</th>
+                                        <th>Stoch K</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mtfTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Right: Technical Indicators -->
+                    <div>
+                        <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+                            <div class="stat-card">
+                                <div class="stat-label">Trend</div>
+                                <div id="trendVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Pattern</div>
+                                <div id="patternVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">RSI</div>
+                                <div id="rsiVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Stoch RSI (K/D)</div>
+                                <div id="stochRsiVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">RSI Divergence</div>
+                                <div id="rsiDivVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Supertrend</div>
+                                <div id="supertrendVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Volume Surge</div>
+                                <div id="volSurgeVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">MTF Confluence</div>
+                                <div id="mtfVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">FII Net</div>
+                                <div id="fiiVal" class="stat-value">--</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">DII Net</div>
+                                <div id="diiVal" class="stat-value">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 4: ANALYSIS & LEVELS
+                 ═══════════════════════════════════════════════════════════════ -->
+            <section class="dashboard-section">
+                <div class="section-header">🏗️ ANALYSIS & LEVELS</div>
+
+                <!-- Trade Levels -->
+                <div class="levels">
+                    <div class="level">
+                        <div class="level-label">Entry</div>
+                        <div id="entryVal" class="level-val">--</div>
+                    </div>
+                    <div class="level">
+                        <div class="level-label">Target</div>
+                        <div id="targetVal" class="level-val" style="color:var(--bull)">--</div>
+                    </div>
+                    <div class="level">
+                        <div class="level-label">Stop Loss</div>
+                        <div id="stopVal" class="level-val" style="color:var(--bear)">--</div>
+                    </div>
+                    <div class="level">
+                        <div class="level-label">Price</div>
+                        <div id="priceVal" class="level-val" style="color:var(--ember)">--</div>
+                    </div>
+                    <div class="level">
+                        <div class="level-label">R:R</div>
+                        <div id="rrLevelVal" class="level-val" style="color:var(--purple)">--</div>
+                    </div>
+                </div>
+
+                <!-- Advanced Levels -->
+                <div class="advanced-levels-grid" style="margin-bottom: 1rem;">
                     <div class="card">
                         <div class="card-title">Fibonacci Retracement</div>
                         <table class="levels-mini-table" id="fibTable">
@@ -2249,7 +2191,6 @@
                             </tbody>
                         </table>
                     </div>
-                    <!-- Camarilla + Key Levels -->
                     <div class="card">
                         <div class="card-title">Key Levels</div>
                         <table class="levels-mini-table" id="keyLevelsTable">
@@ -2267,12 +2208,10 @@
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <!-- ═══════ STRATEGY PERFORMANCE ═══════ -->
-            <div class="stat-section">
-                <div class="stat-section-title">ML & SMC Strategy (1Y Intraday Backtest)</div>
-                <div class="card" id="perfCard">
+                <!-- Strategy Performance -->
+                <div class="card" id="perfCard" style="margin-bottom: 1rem;">
+                    <div class="card-title">ML & SMC Strategy (1Y Intraday Backtest)</div>
                     <div class="perf-stats-grid" id="perfStatsGrid">
                         <div class="perf-stat">
                             <div class="perf-stat-label">Win Rate</div>
@@ -2300,21 +2239,122 @@
                         </div>
                     </div>
                 </div>
-                <!-- ═══════ SIGNAL REASONS ═══════ -->
+
+                <!-- Signal Reasoning -->
                 <div class="card" style="margin-bottom: 1rem;">
                     <div class="card-title">Signal Reasoning</div>
                     <ul class="signal-reasons-list" id="signalReasonsList">
                         <li>Scanning…</li>
                     </ul>
                 </div>
+            </section>
 
-                <!-- ═══════ NEWS FEED ═══════ -->
+
+            <!-- ═══════════════════════════════════════════════════════════════
+                 SECTION 5: TRADING & TOOLS
+                 ═══════════════════════════════════════════════════════════════ -->
+            <section class="dashboard-section">
+                <div class="section-header">📝 TRADING & TOOLS</div>
+
+                <!-- Paper Trading Panel -->
+                <div class="card paper-trade-panel" style="margin-bottom: 1rem;">
+                    <div class="card-title">Paper Trading</div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                        <div style="display:flex; flex-direction:column; gap:0.2rem;">
+                            <label style="font-size:0.65rem; color:var(--fog);">Capital (₹)</label>
+                            <input type="number" id="capitalInput" value="100000" onchange="calculatePositionSize()"
+                                style="width:70px; background:var(--background); border:1px solid var(--glass-border); color:var(--text); border-radius:4px; padding:2px 4px;">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.2rem;">
+                            <label style="font-size:0.65rem; color:var(--fog);">Risk %</label>
+                            <input type="number" id="riskInput" value="2" step="0.5" max="10"
+                                onchange="calculatePositionSize()"
+                                style="width:50px; background:var(--background); border:1px solid var(--glass-border); color:var(--text); border-radius:4px; padding:2px 4px;">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:0.2rem;">
+                            <label style="font-size:0.65rem; color:var(--fog);">Lot Size</label>
+                            <input type="number" id="lotSizeInput" value="25" min="1" max="5000"
+                                style="width:50px; background:var(--background); border:1px solid var(--glass-border); color:var(--text); border-radius:4px; padding:2px 4px;"
+                                readonly title="Auto-calculated based on Risk">
+                        </div>
+                    </div>
+                    <div style="font-size:0.6rem; color:var(--fog); text-align:right; margin-bottom:0.5rem;">
+                        ATM: <strong id="paperAtmStrike">--</strong>
+                    </div>
+                    <div class="trade-buttons">
+                        <button class="trade-btn buy-ce" id="buyCeBtn" onclick="executePaperTrade('CE')" disabled>
+                            BUY CE
+                            <span class="trade-btn-price" id="buyCePrice">₹ --</span>
+                        </button>
+                        <button class="trade-btn buy-pe" id="buyPeBtn" onclick="executePaperTrade('PE')" disabled>
+                            BUY PE
+                            <span class="trade-btn-price" id="buyPePrice">₹ --</span>
+                        </button>
+                    </div>
+
+                    <!-- Trade Tabs -->
+                    <div class="trade-tabs">
+                        <button class="trade-tab active" onclick="switchTradeView('open')">Open Positions</button>
+                        <button class="trade-tab" onclick="switchTradeView('closed')">Trade History</button>
+                    </div>
+
+                    <!-- Open Positions -->
+                    <div id="openTradesView">
+                        <table class="paper-trades-table">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Strike</th>
+                                    <th>Entry</th>
+                                    <th>Lots</th>
+                                    <th>P&L</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="openTradesBody">
+                                <tr>
+                                    <td colspan="6" style="color:var(--fog); padding:1rem;">No open positions</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="total-pnl-row">
+                            <span class="total-pnl-label">Total Open P&L</span>
+                            <span id="totalOpenPnl" class="total-pnl-val" style="color:var(--fog);">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Trade History (hidden by default) -->
+                    <div id="closedTradesView" style="display:none;">
+                        <table class="paper-trades-table">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Strike</th>
+                                    <th>Entry</th>
+                                    <th>Exit</th>
+                                    <th>P&L</th>
+                                </tr>
+                            </thead>
+                            <tbody id="closedTradesBody">
+                                <tr>
+                                    <td colspan="5" style="color:var(--fog); padding:1rem;">No closed trades</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="total-pnl-row">
+                            <span class="total-pnl-label">Total Realized P&L</span>
+                            <span id="totalClosedPnl" class="total-pnl-val" style="color:var(--fog);">₹0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- News Feed -->
                 <div class="card news-feed" style="margin-bottom: 1rem;">
                     <div class="card-title">Market Headlines</div>
                     <div id="newsItems"></div>
                 </div>
 
-                <!-- ═══════ SIGNAL LOGGER ═══════ -->
+                <!-- Signal Logger -->
                 <div class="stat-section">
                     <div class="stat-section-title">
                         <span class="logger-running-dot inactive" id="loggerDot"></span>
@@ -2346,10 +2386,12 @@
                     </div>
                 </div>
 
-            </div><!-- /content -->
+                <button class="refresh-btn" onclick="fetchData()">Scan Market Now</button>
+            </section>
 
-            <button class="refresh-btn" onclick="fetchData()">Scan Market Now</button>
-        </div>
+        </div><!-- /content -->
+
+    </div><!-- /dashboard -->
 
         <!-- ═══════════════════════════════════════════
          JAVASCRIPT
@@ -2618,88 +2660,17 @@
                 const conf = document.getElementById('btstConfidence');
                 const reasonsList = document.getElementById('btstReasonsList');
 
-                // Auto-Trading Variables
-                let autoTradeEnabled = false;
-                const autoTradeToggle = document.getElementById('autoTradeToggle');
-                const tradeQtyInput = document.getElementById('tradeQty');
-                const autoTradeSwitchContainer = document.getElementById('autoTradeSwitchContainer');
-
-                autoTradeToggle.addEventListener('change', async (e) => {
-                    // Prevent the default toggle visually until verified
-                    e.preventDefault();
-                    const isTurningOn = e.target.checked;
-                    autoTradeToggle.checked = !isTurningOn; // Revert visually immediately
-
-                    let pwd = "";
-                    if (isTurningOn) {
-                        pwd = prompt("Enter Dashboard Password to Enable Auto-Trading:");
-                        if (!pwd) return;
-                    } else {
-                        pwd = prompt("Enter Dashboard Password to Disable Auto-Trading:");
-                        if (!pwd) return;
-                    }
-
-                    autoTradeSwitchContainer.classList.add('disabled');
-                    try {
-                        const qty = parseInt(tradeQtyInput.value) || 1;
-                        const res = await fetch(`${API_BASE}/api/toggle-trading`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ enable: isTurningOn, password: pwd, qty: qty })
-                        });
-
-                        if (res.ok) {
-                            const data = await res.json();
-                            if (data.success) {
-                                autoTradeEnabled = isTurningOn;
-                                autoTradeToggle.checked = isTurningOn;
-                                alert(data.message);
-                            } else {
-                                alert(data.error || "Incorrect password or error");
-                            }
-                        } else {
-                            alert("Failed to connect to server");
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        alert("Error toggling auto-trade");
-                    } finally {
-                        autoTradeSwitchContainer.classList.remove('disabled');
-                    }
-                });
-
-                // Telegram Test Handler
-                const testTgBtn = document.getElementById('testTgBtn');
-                testTgBtn.addEventListener('click', async () => {
-                    const pwd = prompt("Enter Dashboard Password to send test message:");
-                    if (!pwd) return;
-
-                    try {
-                        const res = await fetch(`${API_BASE}/api/test-telegram`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ password: pwd })
-                        });
-
-                        if (res.ok) {
-                            const data = await res.json();
-                            alert(data.message || (data.success ? "Success" : "Error"));
-                        } else {
-                            alert("Failed to connect to server");
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        alert("Error sending test message");
-                    }
-                });
-
                 if (!data || !data.btst_action) {
-                    card.style.display = 'none';
+                    box.textContent = 'Awaiting BTST analysis...';
+                    box.style.background = 'rgba(255,255,255,0.03)';
+                    box.style.color = 'var(--fog)';
+                    box.style.border = '1px solid rgba(255,255,255,0.05)';
+                    entry.textContent = '--';
+                    target.textContent = '--';
+                    sl.textContent = '--';
+                    conf.textContent = 'Confidence: --';
                     return;
                 }
-
-                // Always show the card
-                card.style.display = 'block';
 
                 const isBTSTBuy = data.btst_action.includes('CE');
                 const isBTSTSell = data.btst_action.includes('PE');
@@ -2833,7 +2804,6 @@
             // ── Timeframe Switcher ──────────────────────
             async function switchTimeframe(tf) {
                 currentInterval = tf;
-                // Update tab active states
                 document.querySelectorAll('.tf-tab').forEach(t => t.classList.remove('active'));
                 document.querySelector(`.tf-tab[data-tf="${tf}"]`).classList.add('active');
                 document.getElementById('chartTitle').textContent = `Price Action — ${tf} Candles`;
@@ -2843,7 +2813,6 @@
                     const candleData = await res.json();
                     if (candleData.candles && candleData.candles.length > 0) {
                         candleSeries.setData(candleData.candles);
-                        // Clear and re-add overlays
                         ema9Line.setData([]);
                         ema21Line.setData([]);
                         vwapLine.setData([]);
@@ -2876,7 +2845,6 @@
                 ema9Line.setData(computeEMA(candles, 9));
                 ema21Line.setData(computeEMA(candles, 21));
 
-                // Compute VWAP (session-based approximation)
                 const vwapData = [];
                 let cumPV = 0, cumVol = 0;
                 for (const c of candles) {
@@ -2892,7 +2860,6 @@
 
             // ── Add price lines (PDH/PDL, Fibonacci, OI) ─
             function addChartPriceLines() {
-                // Remove old lines
                 if (window._chartPriceLines) {
                     window._chartPriceLines.forEach(l => { try { candleSeries.removePriceLine(l); } catch (e) { } });
                 }
@@ -2902,7 +2869,6 @@
                 const oi = cachedOiData;
                 if (!data) return;
 
-                // PDH / PDL
                 if (data.pdh) {
                     window._chartPriceLines.push(candleSeries.createPriceLine({
                         price: data.pdh, color: '#6B7A99', lineWidth: 1,
@@ -2916,7 +2882,6 @@
                     }));
                 }
 
-                // Fibonacci key levels
                 const fib = data.fibonacci;
                 if (fib) {
                     if (fib.fib_618) {
@@ -2933,7 +2898,6 @@
                     }
                 }
 
-                // OI-based support/resistance
                 if (oi && oi.highest_ce_strike > 0) {
                     window._chartPriceLines.push(candleSeries.createPriceLine({
                         price: oi.highest_ce_strike, color: '#EF4444', lineWidth: 1,
@@ -2947,7 +2911,6 @@
                     }));
                 }
 
-                // VWAP price line
                 if (data.vwap) {
                     window._chartPriceLines.push(candleSeries.createPriceLine({
                         price: data.vwap, color: 'rgba(59, 130, 246, 0.6)', lineWidth: 1,
@@ -2999,24 +2962,16 @@
                 const capital = parseFloat(document.getElementById('capitalInput').value) || 100000;
                 const riskPct = parseFloat(document.getElementById('riskInput').value) || 2;
                 const maxLoss = capital * (riskPct / 100);
-
-                // Assume an average 20 point Stop Loss for ATM Nifty Options
                 const avgOptionSlPoints = 20;
-
-                // Qty = Max Loss / Points at Risk
                 let recommendedQty = Math.floor(maxLoss / avgOptionSlPoints);
-
-                // Nifty lot size is 25. Round to nearest lot.
                 let lots = Math.floor(recommendedQty / 25);
-                if (lots < 1) lots = 1; // Minimum 1 lot
-
+                if (lots < 1) lots = 1;
                 const lotInput = document.getElementById('lotSizeInput');
                 if (lotInput) {
                     lotInput.value = lots * 25;
                 }
             }
             async function executePaperTrade(optionType) {
-                // Prefer the ultra-fast live tick data, fallback to cached 60s signal data
                 const data = window.latestLiveTick || cachedSignalData;
                 if (!data) return;
 
@@ -3055,13 +3010,11 @@
 
             async function closePaperTrade(tradeId) {
                 try {
-                    // Get current option price (use cached or estimate)
-                    const closePrice = 0; // Let backend handle
+                    const closePrice = 0;
                     const res = await fetch(`${API_BASE}/api/paper-trade/${tradeId}/close?close_price=${closePrice}`, {
                         method: 'POST'
                     });
                     const closedTrade = await res.json();
-                    // Update local state
                     const idx = paperTrades.findIndex(t => t.id === tradeId);
                     if (idx >= 0) paperTrades[idx] = closedTrade;
                     renderPaperTrades();
@@ -3072,7 +3025,6 @@
 
             async function updateOpenPaperTrades(data) {
                 try {
-                    // Find open trades
                     const openTrades = paperTrades.filter(t => t.status === 'OPEN');
                     if (openTrades.length > 0) {
                         const updatePromises = openTrades.map(trade => {
@@ -3081,7 +3033,6 @@
                                 const sg = data.strike_greeks[trade.strike];
                                 currentPrice = trade.option_type === 'CE' ? sg.ce_ltp : sg.pe_ltp;
                             } else {
-                                // Fallback if strike is out of bounds
                                 currentPrice = trade.option_type === 'CE' ? data.atm_ce_ltp : data.atm_pe_ltp;
                             }
                             if (currentPrice > 0) {
@@ -3093,7 +3044,6 @@
                         });
                         await Promise.all(updatePromises);
                     }
-                    // Refresh list after updates
                     await refreshPaperTrades();
                 } catch (e) {
                     console.error('Update trades error:', e);
@@ -3118,7 +3068,6 @@
                 const openTrades = paperTrades.filter(t => t.status === 'OPEN');
                 const closedTrades = paperTrades.filter(t => t.status === 'CLOSED');
 
-                // Open positions
                 if (openTrades.length === 0) {
                     openBody.innerHTML = '<tr><td colspan="6" style="color:var(--fog); padding:1rem;">No open positions</td></tr>';
                 } else {
@@ -3137,13 +3086,11 @@
                     }).join('');
                 }
 
-                // Total open P&L
                 const totalOpenPnl = openTrades.reduce((sum, t) => sum + (t.current_price - t.entry_price) * t.lot_size, 0);
                 const totalOpenEl = document.getElementById('totalOpenPnl');
                 totalOpenEl.textContent = '₹' + totalOpenPnl.toFixed(2);
                 totalOpenEl.className = 'total-pnl-val ' + (totalOpenPnl >= 0 ? 'pnl-positive' : 'pnl-negative');
 
-                // Closed trades
                 if (closedTrades.length === 0) {
                     closedBody.innerHTML = '<tr><td colspan="5" style="color:var(--fog); padding:1rem;">No closed trades</td></tr>';
                 } else {
@@ -3171,7 +3118,6 @@
             // ══════════════════════════════════════════════
             async function fetchData() {
                 const rawInput = document.getElementById('symbolInput').value.trim().toUpperCase();
-                // Reset PDC when ticker changes so % doesn't show wrong value
                 if (rawInput && rawInput !== currentTicker) {
                     window.globalPdc = null;
                     document.getElementById('headerChange').textContent = '--';
@@ -3217,7 +3163,6 @@
                     const candleData = await candleRes.json();
                     const oiData = oiRes ? await oiRes.json() : { oi_data: [], pcr: null };
 
-                    // Cache for overlays and paper trading
                     cachedSignalData = data;
                     cachedOiData = oiData;
 
@@ -3317,7 +3262,7 @@
                         mlStatEl.style.color = ml.status === 'Live' ? 'var(--bull)' : 'var(--bear)';
                     }
 
-                    // ── Multi-Strategy Risk Profiles (Phase 5) ──
+                    // ── Multi-Strategy Risk Profiles ──
                     if (data.multi_signals && data.multi_signals.length > 0) {
                         const idMap = {Safe: 'msSafeAction', Normal: 'msNormalAction', Optimal: 'msOptimalAction', Sniper: 'msSniperAction'};
                         const boxMap = {Safe: 'ms-safe', Normal: 'ms-normal', Optimal: 'ms-optimal', Sniper: 'ms-sniper'};
@@ -3357,9 +3302,7 @@
                     tcBox.style.display = 'block';
                     const tcEntryEl = document.getElementById('tcEntry');
                     
-                    // Fallback: If backend didn't send trade_card, build it from multi_signals
                     if (!tc && data.multi_signals && data.multi_signals.length > 0) {
-                        // Pick the strongest signal (Sniper down to Safe)
                         let activeSignal = null;
                         for (let i = data.multi_signals.length - 1; i >= 0; i--) {
                             if (data.multi_signals[i].action.includes('BUY')) {
@@ -3370,11 +3313,11 @@
                         if (activeSignal) {
                             const isBullish = activeSignal.action.includes('CE');
                             const strikeVal = activeSignal.action.replace('BUY ', '');
-                            let optPrice = 120; // Fallback
+                            let optPrice = 120;
                             if (isBullish && data.atm_ce_ltp) optPrice = data.atm_ce_ltp;
                             else if (!isBullish && data.atm_pe_ltp) optPrice = data.atm_pe_ltp;
                             
-                            const atr = 30; // Fallback ATR
+                            const atr = 30;
                             const currentPrice = data.current_price || 24000;
                             const idxTarget = isBullish ? currentPrice + (atr * 1.5) : currentPrice - (atr * 1.5);
                             const idxSl = isBullish ? currentPrice - (atr * 1.5) : currentPrice + (atr * 1.5);
@@ -3427,7 +3370,7 @@
                     // ── BTST Signal ──
                     renderBTST(data);
 
-                    // ── Signal Accuracy (#6) ──
+                    // ── Signal Accuracy ──
                     if (data.signal_history_accuracy) {
                         const acc = data.signal_history_accuracy;
                         const reasonsList = document.getElementById('signalReasonsList');
@@ -3464,7 +3407,6 @@
                     document.getElementById('atmPeLtp').innerText = peLtp > 0 ? '₹' + parseFloat(peLtp).toFixed(2) : '--';
 
                     // ── Stats ──
-                    // PCR
                     const pcrElem = document.getElementById('pcrVal');
                     if (data.pcr !== null && data.pcr !== undefined) {
                         const volPcr = data.vpcr !== null && data.vpcr !== undefined ? data.vpcr : '--';
@@ -3475,7 +3417,6 @@
                         pcrElem.className = 'stat-value';
                     }
 
-                    // Max Pain
                     const maxPainElem = document.getElementById('maxPainVal');
                     if (data.max_pain) {
                         maxPainElem.innerText = data.max_pain;
@@ -3486,7 +3427,6 @@
 
                     document.getElementById('expiryVal').innerText = data.expiry || '--';
 
-                    // FII / DII
                     const fiiElem = document.getElementById('fiiVal');
                     if (data.fii_net) {
                         const fiiAbs = Math.abs(data.fii_net);
@@ -3501,31 +3441,26 @@
                     } else { diiElem.innerText = '--'; }
                     diiElem.className = 'stat-value ' + (data.dii_net > 0 ? 'bullish' : data.dii_net < 0 ? 'bearish' : '');
 
-                    // Trend
                     const trendElem = document.getElementById('trendVal');
                     trendElem.innerText = data.tech_trend;
                     trendElem.className = 'stat-value ' + (data.tech_trend.includes('Bullish') ? 'bullish' : data.tech_trend.includes('Bearish') ? 'bearish' : '');
 
-                    // Pattern
                     const patternElem = document.getElementById('patternVal');
                     patternElem.innerText = data.chart_pattern || 'None';
                     const bullPatterns = ['Bullish Engulfing', 'Hammer', 'Morning Star', 'Bullish Pin Bar', 'Three White Soldiers', 'Inverted Hammer'];
                     const bearPatterns = ['Bearish Engulfing', 'Shooting Star', 'Evening Star', 'Bearish Pin Bar', 'Three Black Crows', 'Hanging Man'];
                     patternElem.className = 'stat-value ' + (bullPatterns.includes(data.chart_pattern) ? 'bullish' : bearPatterns.includes(data.chart_pattern) ? 'bearish' : '');
 
-                    // RSI
                     const rsiElem = document.getElementById('rsiVal');
                     rsiElem.innerText = data.rsi;
                     rsiElem.className = 'stat-value ' + (data.rsi > 60 ? 'bullish' : data.rsi < 40 ? 'bearish' : '');
 
-                    // Supertrend
                     const stElem = document.getElementById('supertrendVal');
                     if (data.supertrend_direction) {
                         stElem.innerText = data.supertrend_direction;
                         stElem.className = 'stat-value ' + (data.supertrend_direction === 'Bullish' ? 'bullish' : 'bearish');
                     } else { stElem.innerText = '--'; }
 
-                    // Volume Surge
                     const vsElem = document.getElementById('volSurgeVal');
                     if (data.volume_surge) {
                         vsElem.innerText = data.volume_ratio + 'x ▲';
@@ -3535,12 +3470,10 @@
                         vsElem.className = 'stat-value';
                     }
 
-                    // Stoch RSI
                     const srElem = document.getElementById('stochRsiVal');
                     srElem.innerText = data.stoch_rsi_k + ' / ' + data.stoch_rsi_d;
                     srElem.className = 'stat-value ' + (data.stoch_rsi_k < 20 ? 'bearish' : data.stoch_rsi_k > 80 ? 'bullish' : '');
 
-                    // RSI Divergence
                     const rdElem = document.getElementById('rsiDivVal');
                     if (data.rsi_divergence === 'bullish') {
                         rdElem.innerText = 'Bullish ↑';
@@ -3553,7 +3486,6 @@
                         rdElem.className = 'stat-value';
                     }
 
-                    // MTF Confluence
                     const mtfElem = document.getElementById('mtfVal');
                     if (data.mtf_confluence) {
                         mtfElem.innerText = data.mtf_confluence;
@@ -3562,7 +3494,6 @@
                         mtfElem.className = 'stat-value ' + (bCount >= 4 ? 'bullish' : bCount <= 1 ? 'bearish' : '');
                     } else { mtfElem.innerText = '--'; }
 
-                    // VIX
                     const vixElem = document.getElementById('vixVal');
                     if (data.vix) {
                         const vixTxt = data.vix.toFixed(1) + (data.vix_change ? ' (' + (data.vix_change > 0 ? '+' : '') + data.vix_change + '%)' : '');
@@ -3570,12 +3501,10 @@
                         vixElem.className = 'stat-value ' + (data.vix_change > 3 ? 'bearish' : data.vix_change < -3 ? 'bullish' : '');
                     } else { vixElem.innerText = '--'; }
 
-                    // Sentiment
                     const sentimentElem = document.getElementById('sentimentVal');
                     sentimentElem.innerText = data.sentiment_score;
                     sentimentElem.className = 'stat-value ' + (data.sentiment_score > 60 ? 'bullish' : data.sentiment_score < 40 ? 'bearish' : '');
 
-                    // OI Buildup
                     const buildupElem = document.getElementById('buildupVal');
                     if (data.buildup) {
                         const ceChg = data.buildup.ce_change || 0;
@@ -3594,7 +3523,6 @@
                         buildupElem.innerText = '--';
                     }
 
-                    // Options Volume
                     const optVolElem = document.getElementById('optVolVal');
                     const deltaElem = document.getElementById('deltaVal');
                     const ivElem = document.getElementById('ivVal');
@@ -3624,7 +3552,7 @@
                         ivSkewElem.innerText = '--';
                     }
 
-                    // ── News (5 headlines) ──
+                    // ── News ──
                     const newsItems = document.getElementById('newsItems');
                     newsItems.innerHTML = '';
                     (data.recent_headlines || []).forEach(h => {
@@ -3677,7 +3605,7 @@
             let backtestFetched = false;
 
             async function fetchBacktest() {
-                if (backtestFetched) return; // Only fetch once per session
+                if (backtestFetched) return;
                 try {
                     const res = await fetch(`${API_BASE}/api/backtest?ticker=${encodeURIComponent(currentTicker)}&t=${Date.now()}`);
                     const bt = await res.json();
@@ -3717,8 +3645,6 @@
             // ═══════════════════════════════════════════
             let loggerRunning = false;
             let loggerPollInterval = null;
-
-
 
             function updateLoggerUI(data) {
                 const dot = document.getElementById('loggerDot');
@@ -3763,7 +3689,7 @@
             }
 
             // ═══════════════════════════════════════════
-            // SSE LIVE TICK STREAM — updates prices without page refresh
+            // SSE LIVE TICK STREAM
             // ═══════════════════════════════════════════
             let liveTickSource = null;
             window.latestLiveTick = null;
@@ -3772,7 +3698,6 @@
                 if (tick.error) { console.warn('Tick error:', tick.error); return; }
                 window.latestLiveTick = tick;
 
-                // ── Spot Price (header) ──
                 if (tick.current_price > 0) {
                     const priceEl = document.getElementById('headerPrice');
                     const oldPrice = parseFloat(priceEl.textContent) || 0;
@@ -3785,7 +3710,6 @@
                         changeEl.className = 'header-change ' + (change >= 0 ? 'up' : 'down');
                     }
 
-                    // Flash green/red on price change
                     if (oldPrice > 0 && tick.current_price !== oldPrice) {
                         priceEl.style.transition = 'color 0.15s';
                         priceEl.style.color = tick.current_price > oldPrice ? 'var(--bull)' : 'var(--bear)';
@@ -3793,12 +3717,10 @@
                     }
                 }
 
-                // ── ATM Strike ──
                 if (tick.atm_strike) {
                     document.getElementById('paperAtmStrike').textContent = tick.atm_strike;
                 }
 
-                // ── ATM CE/PE LTP ──
                 const ceLtp = tick.atm_ce_ltp || 0;
                 const peLtp = tick.atm_pe_ltp || 0;
                 document.getElementById('atmCeLtp').innerText = ceLtp > 0 ? '₹' + parseFloat(ceLtp).toFixed(2) : '--';
@@ -3808,7 +3730,6 @@
                 document.getElementById('buyCeBtn').disabled = !(ceLtp > 0);
                 document.getElementById('buyPeBtn').disabled = !(peLtp > 0);
 
-                // ── PCR ──
                 const pcrElem = document.getElementById('pcrVal');
                 if (tick.pcr !== null && tick.pcr !== undefined) {
                     const volPcr = tick.vpcr !== null && tick.vpcr !== undefined ? tick.vpcr : '--';
@@ -3816,13 +3737,9 @@
                     pcrElem.className = 'stat-value ' + (tick.pcr > 1.2 ? 'bullish' : tick.pcr < 0.8 ? 'bearish' : '');
                 }
 
-                // ── Max Pain ──
                 if (tick.max_pain) document.getElementById('maxPainVal').innerText = tick.max_pain;
-
-                // ── Expiry ──
                 if (tick.expiry) document.getElementById('expiryVal').innerText = tick.expiry;
 
-                // ── OI Buildup ──
                 const buildupElem = document.getElementById('buildupVal');
                 if (tick.buildup) {
                     const ceChg = tick.buildup.ce_change || 0;
@@ -3839,7 +3756,6 @@
                     }
                 }
 
-                // ── Opt Volume ──
                 if (tick.total_ce_vol && tick.total_pe_vol) {
                     const optVolElem = document.getElementById('optVolVal');
                     const ceVol = tick.total_ce_vol;
@@ -3848,7 +3764,6 @@
                     optVolElem.className = 'stat-value ' + (peVol > ceVol * 1.1 ? 'bullish' : ceVol > peVol * 1.1 ? 'bearish' : '');
                 }
 
-                // ── Greeks (IV, Delta) ──
                 if (tick.greeks) {
                     const deltaElem = document.getElementById('deltaVal');
                     const ivElem = document.getElementById('ivVal');
@@ -3865,15 +3780,12 @@
                     ivSkewElem.className = 'stat-value ' + (skew > 2 ? 'bullish' : skew < -2 ? 'bearish' : '');
                 }
 
-                // ── OI Chart ──
                 if (tick.oi_data && tick.oi_data.length > 0) {
                     renderOIChart(tick.oi_data, tick.atm_strike);
                 }
 
-                // ── Paper Trades P&L (use strike_greeks for accurate per-strike pricing) ──
                 updateOpenPaperTrades(tick);
 
-                // ── Connection status ──
                 const statusEl = document.getElementById('connectionStatus');
                 statusEl.className = 'connection-status connected';
                 statusEl.innerHTML = '⚡ Live Stream · OI: Live';
@@ -3881,7 +3793,7 @@
 
             function connectLiveTick() {
                 if (liveTickSource) { liveTickSource.close(); }
-                window.latestLiveTick = null; // Clear stale data before new stream starts
+                window.latestLiveTick = null;
                 const url = `${API_BASE}/api/live-tick?ticker=${encodeURIComponent(currentTicker)}`;
                 liveTickSource = new EventSource(url);
 
@@ -3915,32 +3827,99 @@
                 setInterval(updateMarketStatus, 30000);
                 setInterval(updateClock, 1000);
 
-                // Initial full fetch (AI signal + candles + technicals)
+                // ── Auto-Trade Toggle (attached once) ──
+                const autoTradeToggle = document.getElementById('autoTradeToggle');
+                const tradeQtyInput = document.getElementById('tradeQty');
+                const autoTradeSwitchContainer = document.getElementById('autoTradeSwitchContainer');
+
+                autoTradeToggle.addEventListener('change', async (e) => {
+                    e.preventDefault();
+                    const isTurningOn = e.target.checked;
+                    autoTradeToggle.checked = !isTurningOn;
+
+                    let pwd = "";
+                    if (isTurningOn) {
+                        pwd = prompt("Enter Dashboard Password to Enable Auto-Trading:");
+                        if (!pwd) return;
+                    } else {
+                        pwd = prompt("Enter Dashboard Password to Disable Auto-Trading:");
+                        if (!pwd) return;
+                    }
+
+                    autoTradeSwitchContainer.classList.add('disabled');
+                    try {
+                        const qty = parseInt(tradeQtyInput.value) || 1;
+                        const res = await fetch(`${API_BASE}/api/toggle-trading`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ enable: isTurningOn, password: pwd, qty: qty })
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                autoTradeToggle.checked = isTurningOn;
+                                alert(data.message);
+                            } else {
+                                alert(data.error || "Incorrect password or error");
+                            }
+                        } else {
+                            alert("Failed to connect to server");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert("Error toggling auto-trade");
+                    } finally {
+                        autoTradeSwitchContainer.classList.remove('disabled');
+                    }
+                });
+
+                // ── Telegram Test (attached once) ──
+                document.getElementById('testTgBtn').addEventListener('click', async () => {
+                    const pwd = prompt("Enter Dashboard Password to send test message:");
+                    if (!pwd) return;
+
+                    try {
+                        const res = await fetch(`${API_BASE}/api/test-telegram`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: pwd })
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json();
+                            alert(data.message || (data.success ? "Success" : "Error"));
+                        } else {
+                            alert("Failed to connect to server");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert("Error sending test message");
+                    }
+                });
+
+                // Initial full fetch
                 fetchData();
 
-                // Start SSE live tick stream (2s real-time updates)
+                // Start SSE live tick stream
                 setTimeout(connectLiveTick, 3000);
 
-                // ── Smart Auto-Refresh for FULL AI signal ──────────
-                // 60s during market, 120s pre-market, 300s closed
-                // (Tick data comes via SSE every 2s — this is just for the heavy AI engine)
+                // Smart Auto-Refresh
                 let smartRefreshTimer = null;
                 function startSmartRefresh() {
                     if (smartRefreshTimer) clearInterval(smartRefreshTimer);
                     const status = computeMarketStatus();
                     let interval;
-                    if (status === 'live') interval = 60000;   // 60s during market
-                    else if (status === 'pre') interval = 120000;  // 2min pre-market
-                    else interval = 300000;  // 5min after hours
+                    if (status === 'live') interval = 60000;
+                    else if (status === 'pre') interval = 120000;
+                    else interval = 300000;
                     smartRefreshTimer = setInterval(fetchData, interval);
                 }
                 startSmartRefresh();
-                // Re-evaluate refresh rate every 60 seconds
                 setInterval(startSmartRefresh, 60000);
 
-                // Fetch backtest after a short delay (non-blocking)
+                // Fetch backtest after a short delay
                 setTimeout(fetchBacktest, 5000);
-                // Restore saved sheet URL
             });
         </script>
 </body>
