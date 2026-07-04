@@ -1519,7 +1519,7 @@ def generate_signals(ticker="^NSEI"):
             "SL": round(idx_sl, 2),
             "SL_Price": opt_sl,
             "Confidence_Level": conf_str,
-            "Last_Backtested": "05.06.2026"
+            "Last_Backtested": "04.07.2026"
         }
     
     result["trade_card"] = trade_card
