@@ -1,5 +1,5 @@
 fastapi
-uvicorn[standard]
+uvicorn
 pandas
 yfinance
 scikit-learn
@@ -12,6 +12,6 @@ websocket-client
 ijson
 vaderSentiment
 logzero
+
+scikit-learn
 joblib
-scipy
-httpx

@@ -1,14 +1,48 @@
-import time
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional, List
-
 from ai_engine import generate_signals
-from data_fetcher import fetch_market_data, get_angel_session
+from telegram_bot import send_telegram_alert, send_telegram_startup_message, send_telegram_test_message
+from data_fetcher import fetch_market_data, get_angel_session, fetch_advanced_oi
+from trading_engine import place_market_order, square_off, check_exit_conditions, get_open_position, get_virtual_position, set_virtual_position, clear_virtual_position, get_option_contract
+import json
+import asyncio
+import uuid
+import os
+from datetime import datetime
+from typing import Optional
 
-app = FastAPI(title="AI Trading Signal API v2 — 5TF Edition")
+app = FastAPI(title="AI Trading API")
 
+@app.on_event("startup")
+def startup_event():
+    # Send telegram message to confirm bot works on startup (Disabled as per user request)
+    # send_telegram_startup_message()
+    
+    # Auto-start Google Sheets logger
+    try:
+        from signal_logger import start_logger
+        import os
+        sheet_url = os.environ.get("GOOGLE_SHEET_URL")
+        if sheet_url:
+            start_logger(sheet_url, "^NSEI", 25)
+            print("[Startup] Auto-started Google Sheets logger.")
+        else:
+            print("[Startup] GOOGLE_SHEET_URL not set. Skipping auto-logger.")
+    except Exception as e:
+        print(f"[Startup] Failed to auto-start logger: {e}")
+
+# Mount frontend
+frontend_path = os.path.join(os.path.dirname(__file__), '..', 'frontend')
+app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse(os.path.join(frontend_path, "index.html"))
+
+# Enable CORS for the frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,145 +51,658 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── In-memory paper-trade store (session-scoped) ─────────────────────────────
-_paper_trades: List[dict] = []
-_trade_counter: int = 0
+# ─────────────────────────────────────────────────────────────────────────────
+# LIVE TRADING STATE
+# ─────────────────────────────────────────────────────────────────────────────
+AUTO_TRADING_ENABLED = False
+TRADE_QUANTITY_LOTS = 1
+DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "admin123")
+
+class ToggleTradingRequest(BaseModel):
+    enable: bool
+    password: str
+    qty: int = 1
+
+@app.post("/api/toggle-trading")
+def toggle_trading(req: ToggleTradingRequest):
+    global AUTO_TRADING_ENABLED, TRADE_QUANTITY_LOTS
+    if req.password != DASHBOARD_PASSWORD:
+        return {"success": False, "error": "Incorrect dashboard password!"}
+    
+    AUTO_TRADING_ENABLED = req.enable
+    if req.qty > 0:
+        TRADE_QUANTITY_LOTS = req.qty
+        
+    status_msg = "ENABLED" if req.enable else "DISABLED"
+    return {"success": True, "message": f"Auto-Trading is now {status_msg} for {req.qty} lots."}
+
+class TestTelegramRequest(BaseModel):
+    password: str
+
+@app.post("/api/test-telegram")
+def test_telegram(req: TestTelegramRequest):
+    if req.password != DASHBOARD_PASSWORD:
+        return {"success": False, "error": "Incorrect dashboard password!"}
+    
+    success, msg = send_telegram_test_message()
+    return {"success": success, "message": msg}
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HEALTH
-# ─────────────────────────────────────────────────────────────────────────────
-@app.get("/")
-def root():
-    return {"status": "Trading API v2 is live.", "endpoints": [
-        "/api/signal", "/api/candles", "/api/oi",
-        "/api/paper-trade (POST/GET)", "/api/paper-trade/{id}/close (PUT)",
-        "/api/paper-trade/{id} (DELETE)"
-    ]}
+# PAPER TRADING - Persistent Store
+# 
+PAPER_TRADES_FILE = "paper_trades.json"
+import os
+import json
 
-@app.get("/api/health")
+def _load_paper_trades():
+    if os.path.exists(PAPER_TRADES_FILE):
+        try:
+            with open(PAPER_TRADES_FILE, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+def _save_paper_trades():
+    with open(PAPER_TRADES_FILE, 'w') as f:
+        json.dump(paper_trades, f)
+
+paper_trades: list[dict] = _load_paper_trades()
+
+class PaperTradeRequest(BaseModel):
+    ticker: str = "^NSEI"
+    action: str  # "BUY"
+    option_type: str  # "CE" or "PE"
+    strike: float
+    entry_price: float
+    lot_size: int = 25
+    stop_loss: float = 0
+    target: float = 0
+    strategy_type: str = "NORMAL"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SIGNAL HISTORY LOG (#6) — Track signal accuracy over time
+# ─────────────────────────────────────────────────────────────────────────────
+signal_history: list[dict] = []
+MAX_SIGNAL_HISTORY = 50
+
+def _evaluate_past_signals(current_price: float):
+    """Evaluate if past signals were correct based on price movement."""
+    for sig in signal_history:
+        if sig.get("was_correct") is not None:
+            continue  # Already evaluated
+        if sig.get("action") == "WAIT":
+            # WAIT is correct if price moved < 0.3% (stayed flat)
+            if sig.get("price_at_signal") and current_price:
+                pct_move = abs(current_price - sig["price_at_signal"]) / sig["price_at_signal"] * 100
+                sig["price_after"] = current_price
+                sig["was_correct"] = pct_move < 0.3
+        elif sig.get("action") == "BUY":
+            sig["price_after"] = current_price
+            sig["was_correct"] = current_price > sig.get("price_at_signal", 0)
+        elif sig.get("action") == "SELL":
+            sig["price_after"] = current_price
+            sig["was_correct"] = current_price < sig.get("price_at_signal", 0)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RENDER FREE TIER KEEPALIVE — self-ping during market hours
+# ─────────────────────────────────────────────────────────────────────────────
+import threading, time, os, requests as _requests
+
+def _keepalive_loop():
+    """Ping own server every 4 minutes during market hours to prevent Render sleep."""
+    render_url = os.environ.get("RENDER_EXTERNAL_URL", "")
+    if not render_url:
+        print("[Keepalive] No RENDER_EXTERNAL_URL set. Self-ping disabled.")
+        return
+
+    health_url = f"{render_url}/health"
+    print(f"[Keepalive] 🏓 Started. Will ping {health_url} during market hours.")
+
+    while True:
+        try:
+            from datetime import timedelta
+            utc_now = datetime.utcnow()
+            ist_now = utc_now + timedelta(hours=5, minutes=30)
+            h, m, day = ist_now.hour, ist_now.minute, ist_now.isoweekday()
+            total_mins = h * 60 + m
+
+            # Ping during 9:00 - 15:45 IST on weekdays
+            if day <= 5 and 540 <= total_mins <= 945:
+                _requests.get(health_url, timeout=10)
+        except Exception:
+            pass
+        time.sleep(240)  # Every 4 minutes
+
+# Start keepalive on app boot
+_keepalive_thread = threading.Thread(target=_keepalive_loop, daemon=True)
+_keepalive_thread.start()
+
+def _background_trading_loop():
+    """
+    Independent loop that monitors Nifty, BankNifty, and FinNifty in the background.
+    Runs every 5 minutes during market hours.
+    """
+    tickers_to_monitor = ["^NSEI", "^NSEBANK", "NIFTY_FIN_SERVICE.NS"]
+    print(f"[Auto-Trade] Background loop started for {tickers_to_monitor}")
+    
+    while True:
+        try:
+            from datetime import timedelta
+            utc_now = datetime.utcnow()
+            ist_now = utc_now + timedelta(hours=5, minutes=30)
+            h, m, day = ist_now.hour, ist_now.minute, ist_now.isoweekday()
+            total_mins = h * 60 + m
+            
+            # Run during 9:15 - 15:30 IST on weekdays
+            if day <= 5 and 555 <= total_mins <= 930:
+                # Only run exactly on 5-minute boundaries (9:15, 9:20, etc.)
+                if m % 5 == 0:
+                    for ticker in tickers_to_monitor:
+                        try:
+                            # Generate signals
+                            data = generate_signals(ticker)
+                            if "error" not in data:
+                                # Send alerts and run auto-trading
+                                threading.Thread(target=send_telegram_alert, args=(data, ticker), daemon=True).start()
+                                if AUTO_TRADING_ENABLED:
+                                    process_auto_trading(ticker, data)
+                        except Exception as e:
+                            print(f"[Auto-Trade] Background loop error on {ticker}: {e}")
+                    
+                    # Sleep for 60 seconds to avoid running twice in the same minute
+                    time.sleep(60)
+        except Exception as e:
+            print(f"[Auto-Trade] Main loop error: {e}")
+        
+        # Check every 20 seconds
+        time.sleep(20)
+
+# Start background trading loop
+_trading_thread = threading.Thread(target=_background_trading_loop, daemon=True)
+_trading_thread.start()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ROUTES
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/health")
 def health():
-    return {"status": "ok", "time": int(time.time())}
+    return {"status": "alive", "time": datetime.now().isoformat()}
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SIGNAL
-# ─────────────────────────────────────────────────────────────────────────────
+
+def process_auto_trading(ticker: str, data: dict, background_tasks=None):
+    """Executes live auto-trading logic (risk checks, entries, exits) and Manual Trade Alerts."""
+    def execute_async(func, *args, **kwargs):
+        if background_tasks:
+            background_tasks.add_task(func, *args, **kwargs)
+        else:
+            import threading
+            threading.Thread(target=func, args=args, kwargs=kwargs, daemon=True).start()
+
+    now = datetime.now()
+    # 1. 3:15 PM Auto-Square Off (Strict Day Trading)
+    if now.hour == 15 and now.minute >= 15:
+        pos = get_open_position()
+        virtual_pos = get_virtual_position()
+        
+        if pos and AUTO_TRADING_ENABLED:
+            success, msg = square_off()
+            if success:
+                from trading_engine import log_trade
+                current_price = data.get("current_price", 0)
+                entry_price = pos.get("index_price_at_entry", 0)
+                direction = pos.get("direction", "BUY")
+                pnl_pct = (current_price - entry_price) / entry_price if direction == "BUY" else (entry_price - current_price) / entry_price if entry_price > 0 else 0
+                log_trade("EXIT 3:15 PM", pos['symbol'], entry_price, current_price, pnl_pct, "Market closing auto-exit")
+                execute_async(send_telegram_alert, {"action": f"⏰ 3:15 PM AUTO SQUARE-OFF: {msg}"}, ticker)
+        elif pos and not AUTO_TRADING_ENABLED:
+            execute_async(send_telegram_alert, {"action": f"⏰ 3:15 PM WARNING: Market closing, please square off manually!"}, ticker)
+            
+        if virtual_pos and not AUTO_TRADING_ENABLED:
+            from trading_engine import log_trade
+            current_price = data.get("current_price", 0)
+            entry_price = virtual_pos.get("index_price_at_entry", 0)
+            direction = virtual_pos.get("direction", "BUY")
+            pnl_pct = (current_price - entry_price) / entry_price if direction == "BUY" else (entry_price - current_price) / entry_price if entry_price > 0 else 0
+            log_trade("PAPER EXIT 3:15 PM", virtual_pos['symbol'], entry_price, current_price, pnl_pct, "Market closing")
+            execute_async(send_telegram_alert, {"action": f"📝 3:15 PM PAPER TRADE AUTO-CLOSED | PnL: {pnl_pct*100:.2f}%"}, ticker)
+            clear_virtual_position()
+    else:
+        # 2. Extract ML data for risk checks and entries
+        ml_data = data.get("ml_prediction", {})
+        ml_pred = ml_data.get("prediction", "WAIT")
+        ml_conf = ml_data.get("probability", 0)
+        current_price = data.get("current_price", 0)
+        emh = data.get("expected_move_high", 0)
+        atr_value = (emh - current_price) / 1.5 if emh > current_price else 0
+        
+        # 3. RISK CHECK: Check stop-loss & ML reversal
+        pos = get_open_position()
+        virtual_pos = get_virtual_position()
+        active_pos = pos if AUTO_TRADING_ENABLED else (pos or virtual_pos)
+        
+        if active_pos and current_price > 0:
+            should_exit, reason, pnl_pct = check_exit_conditions(active_pos, current_price, ml_pred, ml_conf)
+            if should_exit:
+                from trading_engine import log_trade
+                if AUTO_TRADING_ENABLED and pos:
+                    success, msg = square_off()
+                    if success:
+                        log_trade("EXIT SL/REVERSAL", active_pos['symbol'], active_pos['index_price_at_entry'], current_price, pnl_pct, reason)
+                        execute_async(send_telegram_alert, {"action": f"🛑 RISK EXIT: {reason} | {msg}"}, ticker)
+                elif pos:
+                    # Manual trade warning
+                    execute_async(send_telegram_alert, {"action": f"🛑 MANUAL TRADE WARNING: {reason} (Auto-Trade is OFF, exit manually!)"}, ticker)
+                elif virtual_pos:
+                    log_trade("PAPER EXIT SL/REVERSAL", active_pos['symbol'], active_pos['index_price_at_entry'], current_price, pnl_pct, reason)
+                    execute_async(send_telegram_alert, {"action": f"📝 PAPER TRADE EXIT: {reason} | PnL: {pnl_pct*100:.2f}%"}, ticker)
+                    clear_virtual_position()
+        
+        # 4. ENTRY LOGIC: Only enter new trades if no open position
+        in_lunch = now.hour == 11 and now.minute >= 30 or now.hour == 12 or (now.hour == 13 and now.minute < 30)
+        
+        if not active_pos and ml_pred in ["Bullish", "Bearish"] and ml_conf >= 65 and not in_lunch:
+            action = "BUY" if ml_pred == "Bullish" else "SELL"
+            strike = ml_data.get("strike")
+            
+            if AUTO_TRADING_ENABLED:
+                def execute_trade():
+                    success, msg = place_market_order(action, strike, TRADE_QUANTITY_LOTS, ticker, index_price=current_price, atr_value=atr_value)
+                    if success:
+                        send_telegram_alert({"action": f"🔥 LIVE TRADE EXECUTED: {action} {strike} {msg}"}, ticker)
+                execute_async(execute_trade)
+            else:
+                symbol, token = get_option_contract(ticker, strike, "CE" if action == "BUY" else "PE")
+                if symbol:
+                    set_virtual_position(action, symbol, token, current_price, atr_value)
+                    from trading_engine import log_trade
+                    log_trade("PAPER ENTRY", symbol, current_price, 0.0, 0.0, "AI Breakout Detected (Paper Trading)")
+                    execute_async(send_telegram_alert, {"action": f"📝 PAPER TRADE OPENED: {action} {strike} @ index {current_price}"}, ticker)
+
 @app.get("/api/signal")
-def get_signal(ticker: str = "^NSEI"):
-    try:
-        data = generate_signals(ticker)
-        return data
-    except Exception as e:
-        return {"error": str(e)}
+def get_signal(background_tasks: BackgroundTasks, ticker: str = "^NSEI"):
+    """
+    Returns the latest AI-generated trading signal and market data.
+    Also tracks signal history for accuracy measurement.
+    """
+    data = generate_signals(ticker)
+    
+    if "error" not in data:
+        background_tasks.add_task(send_telegram_alert, data, ticker)
+        
+        # Always process auto trading logic (which now handles manual alerts too)
+        process_auto_trading(ticker, data, background_tasks)
+
+    # Evaluate past signals with current price
+    current_price = data.get("current_price", 0)
+    if current_price > 0:
+        _evaluate_past_signals(current_price)
+
+    # Record this signal
+    entry = {
+        "timestamp": data.get("timestamp", ""),
+        "action": data.get("action", "WAIT"),
+        "confidence": data.get("confidence_score", 50),
+        "price_at_signal": current_price,
+        "price_after": None,
+        "was_correct": None,
+        "signal_strength": data.get("signal_strength", 0),
+    }
+    signal_history.append(entry)
+    if len(signal_history) > MAX_SIGNAL_HISTORY:
+        signal_history.pop(0)
+
+    # Compute accuracy stats
+    evaluated = [s for s in signal_history if s.get("was_correct") is not None]
+    correct = sum(1 for s in evaluated if s["was_correct"])
+    total = len(evaluated)
+    accuracy = round(correct / total * 100, 1) if total > 0 else 0
+
+    data["signal_history_accuracy"] = {
+        "correct": correct,
+        "total": total,
+        "accuracy_pct": accuracy,
+        "label": f"{correct}/{total} correct ({accuracy}%)" if total > 0 else "Collecting data…",
+    }
+
+    return data
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CANDLES  — supports 5m, 15m, 30m, 1h intervals
+# SSE LIVE TICK STREAM — pushes spot + option LTPs every 2 seconds
 # ─────────────────────────────────────────────────────────────────────────────
-PERIOD_MAP = {
-    "5m":  "2d",
-    "15m": "5d",
-    "30m": "30d",
-    "1h":  "60d",
-}
+# Cache the last full signal so ticks can merge into it
+_last_full_signal: dict = {}
+
+@app.get("/api/live-tick")
+async def live_tick_stream(ticker: str = "^NSEI"):
+    """
+    Server-Sent Events endpoint.  Pushes a JSON tick every ~2 seconds with
+    live spot price, ATM CE/PE LTPs, all strike LTPs, and OI snapshot.
+    The frontend connects once with EventSource — no polling, no refresh.
+    """
+    async def event_generator():
+        global _last_full_signal
+        base_symbol = "NIFTY"
+        ticker_upper = ticker.upper()
+        if ticker_upper in ["^NSEI", "NIFTY 50", "NIFTY50", "NIFTY"]: base_symbol = "NIFTY"
+        elif ticker_upper in ["^NSEBANK", "BANK NIFTY", "BANKNIFTY"]: base_symbol = "BANKNIFTY"
+        elif ticker_upper in ["^BSESN", "SENSEX"]: base_symbol = "SENSEX"
+        elif ticker_upper in ["NIFTY_FIN_SERVICE.NS", "FIN NIFTY", "FINNIFTY"]: base_symbol = "FINNIFTY"
+
+        while True:
+            try:
+                session = get_angel_session()
+                if not session:
+                    yield f"data: {json.dumps({'error': 'No Angel session'})}\n\n"
+                    await asyncio.sleep(5)
+                    continue
+
+                # 1) Fetch live spot from Angel (token 26000 = NIFTY)
+                spot_token = "26000"
+                if base_symbol == "BANKNIFTY": spot_token = "26009"
+                elif base_symbol == "SENSEX":  spot_token = "26001"
+
+                spot_res = session.getMarketData("LTP", {"NSE": [spot_token]})
+                spot_price = 0
+                if spot_res and spot_res.get("data", {}).get("fetched"):
+                    spot_price = spot_res["data"]["fetched"][0].get("ltp", 0)
+
+                # 2) Fetch live OI + LTPs for all strikes (uses 15s cache internally)
+                oi_metrics = None
+                if spot_price > 0:
+                    oi_metrics = fetch_advanced_oi(ticker, spot_price)
+
+                tick = {
+                    "type": "tick",
+                    "timestamp": datetime.now().isoformat(),
+                    "current_price": spot_price,
+                    "atm_strike": oi_metrics.get("atm_strike") if oi_metrics else None,
+                    "atm_ce_ltp": oi_metrics.get("atm_ce_ltp") if oi_metrics else None,
+                    "atm_pe_ltp": oi_metrics.get("atm_pe_ltp") if oi_metrics else None,
+                    "pcr": oi_metrics.get("pcr") if oi_metrics else None,
+                    "vpcr": oi_metrics.get("vpcr") if oi_metrics else None,
+                    "max_pain": oi_metrics.get("max_pain") if oi_metrics else None,
+                    "oi_data": oi_metrics.get("oi_data") if oi_metrics else [],
+                    "greeks": oi_metrics.get("greeks") if oi_metrics else None,
+                    "strike_greeks": oi_metrics.get("strike_greeks") if oi_metrics else {},
+                    "buildup": oi_metrics.get("buildup") if oi_metrics else None,
+                    "total_ce_vol": oi_metrics.get("total_ce_vol") if oi_metrics else None,
+                    "total_pe_vol": oi_metrics.get("total_pe_vol") if oi_metrics else None,
+                    "expiry": oi_metrics.get("expiry") if oi_metrics else None,
+                }
+                yield f"data: {json.dumps(tick)}\n\n"
+
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+            await asyncio.sleep(2)  # Push every 2 seconds
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Prevents nginx/proxy buffering
+        }
+    )
+
+@app.get("/api/signal-history")
+def get_signal_history():
+    """Return the signal history log with accuracy stats."""
+    evaluated = [s for s in signal_history if s.get("was_correct") is not None]
+    correct = sum(1 for s in evaluated if s["was_correct"])
+    total = len(evaluated)
+    accuracy = round(correct / total * 100, 1) if total > 0 else 0
+    return {
+        "history": signal_history[-20:],
+        "accuracy": {"correct": correct, "total": total, "accuracy_pct": accuracy},
+    }
 
 @app.get("/api/candles")
 def get_candles(ticker: str = "^NSEI", interval: str = "15m"):
-    period = PERIOD_MAP.get(interval, "5d")
-    try:
-        df = fetch_market_data(ticker, interval=interval, period=period)
-        if df.empty:
-            return {"candles": [], "interval": interval}
-        candles = []
-        for idx, row in df.iterrows():
-            candles.append({
-                "time":   int(idx.timestamp()),
-                "open":   round(float(row["Open"]),  2),
-                "high":   round(float(row["High"]),  2),
-                "low":    round(float(row["Low"]),   2),
-                "close":  round(float(row["Close"]), 2),
-                "volume": int(row.get("Volume", 0)),
-            })
-        return {"candles": candles, "interval": interval}
-    except Exception as e:
-        return {"candles": [], "interval": interval, "error": str(e)}
+    """
+    Returns raw OHLCV candlestick data for frontend charting.
+    Accepts interval parameter: 5m, 15m, 30m, 1h
+    """
+    # Validate interval
+    valid_intervals = {"5m": "2d", "15m": "5d", "30m": "30d", "1h": "60d"}
+    if interval not in valid_intervals:
+        interval = "15m"
+    period = valid_intervals[interval]
 
-# ─────────────────────────────────────────────────────────────────────────────
-# OPEN INTEREST
-# ─────────────────────────────────────────────────────────────────────────────
+    df = fetch_market_data(ticker, interval=interval, period=period)
+    if df.empty:
+        return {"candles": [], "interval": interval}
+
+    candles = []
+    for idx, row in df.iterrows():
+        candles.append({
+            "time": int(idx.timestamp()),
+            "open": round(float(row["Open"]), 2),
+            "high": round(float(row["High"]), 2),
+            "low": round(float(row["Low"]), 2),
+            "close": round(float(row["Close"]), 2),
+            "volume": int(row.get("Volume", 0))
+        })
+    return {"candles": candles, "interval": interval}
+
 @app.get("/api/oi")
 def get_oi(ticker: str = "^NSEI"):
-    from data_fetcher import fetch_advanced_oi
+    """
+    Returns Options Open Interest data for multiple strikes around ATM.
+    Uses Angel One SmartAPI.
+    """
+    from datetime import datetime
+    import requests as req
+
+    base_symbol = "NIFTY"
+    ticker_upper = ticker.upper()
+    if ticker_upper in ["^NSEI", "NIFTY 50", "NIFTY50", "NIFTY"]: base_symbol = "NIFTY"
+    elif ticker_upper in ["^BSESN", "SENSEX"]: base_symbol = "SENSEX"
+    elif ticker_upper in ["^NSEBANK", "BANK NIFTY", "BANKNIFTY"]: base_symbol = "BANKNIFTY"
+    elif ticker_upper in ["NIFTY_FIN_SERVICE.NS", "FIN NIFTY", "FINNIFTY"]: base_symbol = "FINNIFTY"
+    elif ticker.endswith(".NS"): base_symbol = ticker.replace(".NS", "")
+    else:
+        return {"oi_data": [], "pcr": None}
+
     angel = get_angel_session()
     if not angel:
-        return {"oi_data": [], "pcr": None, "error": "Angel One not connected."}
+        return {"oi_data": [], "pcr": None, "error": "Angel One not connected. Check ENV variables."}
+
+    # Get current price from yfinance
     df = fetch_market_data(ticker, interval="15m", period="5d")
     if df.empty:
         return {"oi_data": [], "pcr": None}
     current_price = float(df["Close"].iloc[-1])
+
+    from data_fetcher import fetch_advanced_oi
+
     try:
-        oi = fetch_advanced_oi(ticker, current_price)
-        return oi if oi else {"oi_data": [], "pcr": None}
+        oi_metrics = fetch_advanced_oi(ticker, current_price)
+        if oi_metrics:
+            return oi_metrics
+        else:
+            return {"oi_data": [], "pcr": None, "error": "Failed to fetch OI data from Angel One"}
     except Exception as e:
         return {"oi_data": [], "pcr": None, "error": str(e)}
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PAPER TRADING  (server-side store; frontend also uses localStorage)
+# PAPER TRADING with Trailing SL + Capital Preservation (#4, #3)
 # ─────────────────────────────────────────────────────────────────────────────
-class PaperTradeIn(BaseModel):
-    ticker:       str
-    action:       str          # BUY or SELL
-    option_type:  str          # CE or PE
-    strike:       int
-    entry_price:  float
-    lots:         int   = 1
-    lot_size:     int   = 75
-    note:         Optional[str] = None
+MAX_DAILY_LOSS = 5000  # ₹ configurable
+MAX_OPEN_POSITIONS = 2
+
+def _get_daily_pnl():
+    """Sum P&L of trades closed today."""
+    today = datetime.now().date().isoformat()
+    return sum(
+        t["pnl"] for t in paper_trades
+        if t["status"] == "CLOSED" and t.get("closed_at", "").startswith(today)
+    )
 
 @app.post("/api/paper-trade")
-def create_paper_trade(trade: PaperTradeIn):
-    global _trade_counter
-    _trade_counter += 1
-    record = {
-        "id":           _trade_counter,
-        "ticker":       trade.ticker,
-        "action":       trade.action,
-        "option_type":  trade.option_type,
-        "strike":       trade.strike,
-        "entry_price":  trade.entry_price,
-        "lots":         trade.lots,
-        "lot_size":     trade.lot_size,
-        "note":         trade.note or "",
-        "timestamp":    int(time.time()),
-        "status":       "open",
-        "exit_price":   None,
-        "pnl":          None,
+def create_paper_trade(trade: PaperTradeRequest):
+    """Execute a paper trade with real option prices + capital preservation."""
+    # Gate: Max daily loss
+    if _get_daily_pnl() <= -MAX_DAILY_LOSS:
+        raise HTTPException(status_code=403, detail=f"Daily loss limit (₹{MAX_DAILY_LOSS}) reached. No new trades today.")
+
+    # Gate: Max open positions
+    open_count = sum(1 for t in paper_trades if t["status"] == "OPEN")
+    if open_count >= MAX_OPEN_POSITIONS:
+        raise HTTPException(status_code=403, detail=f"Max {MAX_OPEN_POSITIONS} open positions allowed.")
+
+    trade_obj = {
+        "id": str(uuid.uuid4())[:8],
+        "ticker": trade.ticker,
+        "action": trade.action,
+        "option_type": trade.option_type,
+        "strike": trade.strike,
+        "entry_price": trade.entry_price,
+        "current_price": trade.entry_price,
+        "lot_size": trade.lot_size,
+        "stop_loss": trade.stop_loss,
+        "initial_sl": trade.stop_loss,       # Original SL (never moves up)
+        "trailing_sl": trade.stop_loss,       # Trailing SL (moves up)
+        "target": trade.target,
+        "peak_price": trade.entry_price,      # Highest price seen
+        "status": "OPEN",
+        "pnl": 0.0,
+        "opened_at": datetime.now().isoformat(),
+        "closed_at": None,
+        "strategy_type": trade.strategy_type,
     }
-    _paper_trades.append(record)
-    return {"success": True, "trade": record}
+    paper_trades.append(trade_obj)
+    _save_paper_trades()
+    return trade_obj
 
 @app.get("/api/paper-trades")
-def list_paper_trades(status: Optional[str] = None):
-    if status:
-        return {"trades": [t for t in _paper_trades if t["status"] == status]}
-    return {"trades": _paper_trades}
+def get_paper_trades():
+    """Return all paper trades (open + closed) + daily P&L."""
+    return {
+        "trades": paper_trades,
+        "daily_pnl": round(_get_daily_pnl(), 2),
+        "daily_loss_limit": MAX_DAILY_LOSS,
+        "daily_limit_hit": _get_daily_pnl() <= -MAX_DAILY_LOSS,
+    }
 
-@app.put("/api/paper-trade/{trade_id}/close")
-def close_paper_trade(trade_id: int, exit_price: float):
-    for t in _paper_trades:
-        if t["id"] == trade_id and t["status"] == "open":
-            t["status"]     = "closed"
-            t["exit_price"] = exit_price
-            ls, lots, entry = t["lot_size"], t["lots"], t["entry_price"]
-            t["pnl"] = round(
-                (exit_price - entry) * ls * lots if t["action"] == "BUY"
-                else (entry - exit_price) * ls * lots, 2
-            )
-            t["close_time"] = int(time.time())
-            return {"success": True, "trade": t}
-    raise HTTPException(404, "Trade not found or already closed")
+@app.post("/api/paper-trade/{trade_id}/update")
+def update_paper_trade(trade_id: str, current_price: float = 0):
+    """Update current price and apply trailing SL logic."""
+    for trade in paper_trades:
+        if trade["id"] == trade_id and trade["status"] == "OPEN":
+            if current_price <= 0:
+                return trade
 
-@app.delete("/api/paper-trade/{trade_id}")
-def delete_paper_trade(trade_id: int):
-    global _paper_trades
-    before = len(_paper_trades)
-    _paper_trades = [t for t in _paper_trades if t["id"] != trade_id]
-    return {"success": len(_paper_trades) < before}
+            trade["current_price"] = current_price
+            entry = trade["entry_price"]
+            diff = current_price - entry
+            trade["pnl"] = round(diff * trade["lot_size"], 2)
+
+            # Track peak price
+            if current_price > trade["peak_price"]:
+                trade["peak_price"] = current_price
+
+            # ── Trailing SL Logic ─────────────────────────────────
+            # Estimate ATR as 1% of entry for paper trading
+            atr_estimate = entry * 0.01
+
+            profit = current_price - entry
+            if profit > 2 * atr_estimate:
+                # Trail SL at entry + 1×ATR
+                new_sl = entry + atr_estimate
+                trade["trailing_sl"] = max(trade["trailing_sl"], new_sl)
+            elif profit > 1 * atr_estimate:
+                # Move SL to breakeven
+                trade["trailing_sl"] = max(trade["trailing_sl"], entry)
+
+            # ── Auto-close if trailing SL hit ─────────────────────
+            if current_price <= trade["trailing_sl"]:
+                trade["status"] = "CLOSED"
+                trade["closed_at"] = datetime.now().isoformat()
+                trade["current_price"] = trade["trailing_sl"]
+                diff = trade["trailing_sl"] - entry
+                trade["pnl"] = round(diff * trade["lot_size"], 2)
+
+            # Hit SL or Target? -> Auto Close
+            if (trade["stop_loss"] > 0 and current_price <= trade["stop_loss"] and trade["option_type"] == "CE") or \
+               (trade["target"] > 0 and current_price >= trade["target"] and trade["option_type"] == "CE"):
+                trade["status"] = "CLOSED"
+                trade["closed_at"] = datetime.now().isoformat()
+                
+            elif (trade["stop_loss"] > 0 and current_price >= trade["stop_loss"] and trade["option_type"] == "PE") or \
+                 (trade["target"] > 0 and current_price <= trade["target"] and trade["option_type"] == "PE"):
+                trade["status"] = "CLOSED"
+                trade["closed_at"] = datetime.now().isoformat()
+            
+            _save_paper_trades()
+            return trade
+    raise HTTPException(status_code=404, detail="Trade not found or already closed")
+
+@app.post("/api/paper-trade/{trade_id}/close")
+def close_paper_trade(trade_id: str, close_price: float = 0):
+    """Close an open paper trade at the given price."""
+    for trade in paper_trades:
+        if trade["id"] == trade_id and trade["status"] == "OPEN":
+            trade["status"] = "CLOSED"
+            trade["closed_at"] = datetime.now().isoformat()
+            if close_price > 0:
+                trade["current_price"] = close_price
+            # P&L = (current - entry) * lot_size for BUY
+            diff = trade["current_price"] - trade["entry_price"]
+            trade["pnl"] = round(diff * trade["lot_size"], 2)
+            _save_paper_trades()
+            return trade
+    raise HTTPException(status_code=404, detail="Trade not found or already closed")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BACKTEST ENDPOINT
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/backtest")
+def get_backtest(ticker: str = "^NSEI"):
+    """Returns 1-year backtest results for the signal strategy (cached 6h)."""
+    from backtester import run_backtest
+    result = run_backtest(ticker)
+    return result
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SIGNAL LOGGER ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+class LoggerConfig(BaseModel):
+    sheet_url: str
+    ticker: str = "^NSEI"
+    lot_size: int = 25
+
+@app.post("/api/logger/start")
+def start_signal_logger(config: LoggerConfig):
+    """Start the background signal logger. Requires Google Apps Script web app URL."""
+    from signal_logger import start_logger
+    result = start_logger(config.sheet_url, config.ticker, config.lot_size)
+    return result
+
+@app.post("/api/logger/stop")
+def stop_signal_logger():
+    """Stop the background signal logger."""
+    from signal_logger import stop_logger
+    return stop_logger()
+
+@app.get("/api/logger/status")
+def get_logger_status():
+    """Get current logger status (running, position, daily P&L)."""
+    from signal_logger import get_logger_status
+    return get_logger_status()
+
+@app.get("/api/logger/log")
+def get_logger_log():
+    """Get today's full signal log."""
+    from signal_logger import get_today_log
+    return {"log": get_today_log()}
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok"}
+

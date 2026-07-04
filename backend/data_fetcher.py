@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import yfinance as yf
 import pandas as pd
 import pyotp
@@ -6,7 +8,7 @@ import requests
 from SmartApi import SmartConnect
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Setup custom session to bypass Yahoo Finance rate-limiting on Render
 session = requests.Session()
@@ -105,15 +107,23 @@ def fetch_market_data(ticker_symbol="^NSEI", interval="15m", period="5d"):
         return pd.DataFrame()
 
 def fetch_vix():
-    """Fetches live India VIX data to detect Theta traps."""
+    """Fetches live India VIX data using 5m intraday candles for real-time change detection."""
     try:
         vix = yf.Ticker("^INDIAVIX", session=session)
-        df = vix.history(period="1d", interval="1d")
-        if not df.empty:
+        df = vix.history(period="2d", interval="5m")
+        if not df.empty and len(df) >= 2:
             close = df['Close'].iloc[-1]
-            open_p = df['Open'].iloc[-1]
-            pct_change = ((close - open_p) / open_p) * 100
-            return {"current": close, "pct_change": pct_change}
+            # Find today's open (first candle of today)
+            today = df.index[-1].date()
+            today_df = df[df.index.date == today]
+            if not today_df.empty:
+                day_open = today_df['Open'].iloc[0]
+                pct_change = ((close - day_open) / day_open) * 100
+            else:
+                # Fallback: use previous candle
+                open_p = df['Open'].iloc[-1]
+                pct_change = ((close - open_p) / open_p) * 100
+            return {"current": close, "pct_change": round(pct_change, 2)}
     except Exception as e:
         print(f"Error fetching VIX: {e}")
     return {"current": 15.0, "pct_change": 0.0}
@@ -153,8 +163,9 @@ def get_filtered_angel_options(base_symbol):
                 urllib.request.urlretrieve(url, tmp_dl)
                 os.replace(tmp_dl, temp_path)
 
-            if not os.path.exists(temp_path):
+            if not os.path.exists(temp_path) or (time.time() - os.path.getmtime(temp_path)) > 86400:
                 download_tokens()
+
             
             def parse_tokens():
                 opts = []
@@ -323,6 +334,8 @@ def fetch_advanced_oi(ticker_symbol, current_price):
             atm_ce_vwap = 0
             atm_pe_ltp = 0
             atm_pe_vwap = 0
+            # Per-strike LTP for all-strike greeks computation
+            strike_ltp = {}  # {strike: {"ce_ltp": x, "pe_ltp": y}}
             
             for item in fetched:
                 token = item.get('exchangeToken') or str(item.get('symbolToken', ''))
@@ -331,11 +344,18 @@ def fetch_advanced_oi(ticker_symbol, current_price):
                     strike = info["strike"]
                     oi_val = item.get("opnInterest", 0)
                     vol_val = item.get("tradeVolume", 0)
+                    # Capture LTP for every strike
+                    ltp_val = item.get("ltp", item.get("lastTradedPrice", 0))
+                    avg_val = item.get("avgPrice", item.get("averageTradedPrice", 0))
+                    
+                    if strike not in strike_ltp:
+                        strike_ltp[strike] = {"ce_ltp": 0, "pe_ltp": 0}
+                    if info["type"] == "CE":
+                        strike_ltp[strike]["ce_ltp"] = ltp_val
+                    else:
+                        strike_ltp[strike]["pe_ltp"] = ltp_val
                     
                     if strike == atm:
-                        # SmartAPI v2 uses 'ltp' and 'avgPrice'; legacy uses 'lastTradedPrice'
-                        ltp_val = item.get("ltp", item.get("lastTradedPrice", 0))
-                        avg_val = item.get("avgPrice", item.get("averageTradedPrice", 0))
                         if info["type"] == "CE":
                             atm_ce_ltp = ltp_val
                             atm_ce_vwap = avg_val
@@ -397,13 +417,32 @@ def fetch_advanced_oi(ticker_symbol, current_price):
                 
             r = 0.07 # 7% risk-free rate assumption for India
             
-            # CE Greeks
+            # CE Greeks (ATM)
             atm_ce_iv = calculate_iv(atm_ce_ltp, current_price, atm, T, r, "CE")
             atm_ce_delta = calculate_delta(current_price, atm, T, r, atm_ce_iv, "CE")
             
-            # PE Greeks
+            # PE Greeks (ATM)
             atm_pe_iv = calculate_iv(atm_pe_ltp, current_price, atm, T, r, "PE")
             atm_pe_delta = calculate_delta(current_price, atm, T, r, atm_pe_iv, "PE")
+            
+            # ALL-STRIKE GREEKS — for delta-based strike selection
+            all_strike_greeks = {}
+            for s_strike, s_ltps in strike_ltp.items():
+                sg = {}
+                for opt_type in ("CE", "PE"):
+                    ltp_key = f"{opt_type.lower()}_ltp"
+                    opt_ltp = s_ltps.get(ltp_key, 0)
+                    if opt_ltp > 0:
+                        s_iv = calculate_iv(opt_ltp, current_price, s_strike, T, r, opt_type)
+                        s_delta = calculate_delta(current_price, s_strike, T, r, s_iv, opt_type)
+                        sg[f"{opt_type.lower()}_iv"] = round(s_iv * 100, 2)
+                        sg[f"{opt_type.lower()}_delta"] = round(s_delta, 3)
+                        sg[f"{opt_type.lower()}_ltp"] = opt_ltp
+                    else:
+                        sg[f"{opt_type.lower()}_iv"] = 0
+                        sg[f"{opt_type.lower()}_delta"] = 0
+                        sg[f"{opt_type.lower()}_ltp"] = 0
+                all_strike_greeks[s_strike] = sg
             
             # Intraday Buildup Totals
             total_ce_change = sum(d["ce_oi_change"] for d in oi_data.values())
@@ -434,6 +473,8 @@ def fetch_advanced_oi(ticker_symbol, current_price):
                     "ce_delta": round(atm_ce_delta, 2),
                     "pe_delta": round(atm_pe_delta, 2)
                 },
+                "strike_greeks": all_strike_greeks,
+                "days_to_expiry": days_to_exp,
                 "buildup": {
                     "ce_change": total_ce_change,
                     "pe_change": total_pe_change
@@ -528,6 +569,96 @@ def fetch_fii_dii():
             return res.json()
     except Exception as e:
         print(f"Error fetching FII/DII: {e}")
+    return []
+
+def fetch_angel_historical_data(ticker="^NSEI", days_back=365, interval="FIFTEEN_MINUTE"):
+    """
+    Fetches long-term historical intraday data using Angel One SmartAPI.
+    Uses chunking to bypass API limits on data ranges.
+    Returns a Pandas DataFrame formatted exactly like yfinance.
+    """
+    obj = get_angel_session()
+    if not obj:
+        print("[Angel API] Not connected. Cannot fetch historical data.")
+        return pd.DataFrame()
+        
+    symboltoken = "26000" if ticker == "^NSEI" else "26009" if ticker == "^NSEBANK" else "26000"
+    
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days_back)
+    
+    all_data = []
+    
+    # Angel One limit is usually 90-100 days for 15m, but can fail. We chunk by 15 days safely.
+    current_start = start_date
+    while current_start < end_date:
+        current_end = min(current_start + timedelta(days=15), end_date)
+        
+        historicParam = {
+            "exchange": "NSE",
+            "symboltoken": symboltoken,
+            "interval": interval,
+            "fromdate": current_start.strftime("%Y-%m-%d 09:15"),
+            "todate": current_end.strftime("%Y-%m-%d 15:30")
+        }
+        
+        try:
+            res = obj.getCandleData(historicParam)
+            if res and res.get('status') and res.get('data'):
+                all_data.extend(res['data'])
+            else:
+                print(f"[Angel API Response] {res}")
+        except Exception as e:
+            print(f"[Angel API] Error fetching historical data chunk: {e}")
+            
+        current_start = current_end + timedelta(minutes=15) # Advance to avoid overlap
+        import time
+        time.sleep(0.5) # Prevent rate limiting
+        
+    if not all_data:
+        return pd.DataFrame()
+        
+    df = pd.DataFrame(all_data, columns=['Datetime', 'Open', 'High', 'Low', 'Close', 'Volume'])
+    df['Datetime'] = pd.to_datetime(df['Datetime']).dt.tz_localize(None)
+    df.set_index('Datetime', inplace=True)
+    
+    # Drop duplicates just in case chunks overlapped
+    df = df[~df.index.duplicated(keep='first')]
+    df.sort_index(inplace=True)
+    
+    return df
+
+def get_available_margin():
+    """
+    Returns the total available cash margin from Angel One.
+    """
+    obj = get_angel_session()
+    if not obj: return 0.0
+    
+    try:
+        res = obj.rmsLimit()
+        if res and res.get('status') and res.get('data'):
+            return float(res['data'].get('availablecash', 0.0))
+    except Exception as e:
+        print(f"[Angel API] Error fetching margin: {e}")
+    return 0.0
+
+def get_live_positions():
+    """
+    Returns the list of open positions from Angel One.
+    """
+    obj = get_angel_session()
+    if not obj: return []
+    
+    try:
+        res = obj.position()
+        if res and res.get('status') and res.get('data'):
+            positions = res['data']
+            if isinstance(positions, list):
+                # Filter for open positions (netqty != 0)
+                return [p for p in positions if int(p.get('netqty', 0)) != 0]
+    except Exception as e:
+        print(f"[Angel API] Error fetching positions: {e}")
     return []
 
 if __name__ == "__main__":
