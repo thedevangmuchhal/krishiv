@@ -283,7 +283,8 @@ def process_auto_trading(ticker: str, data: dict, background_tasks=None):
         active_pos = pos if AUTO_TRADING_ENABLED else (pos or virtual_pos)
         
         if active_pos and current_price > 0:
-            should_exit, reason, pnl_pct = check_exit_conditions(active_pos, current_price, ml_pred, ml_conf)
+            oi_metrics = data.get("raw_oi_metrics", None)
+            should_exit, reason, pnl_pct = check_exit_conditions(active_pos, current_price, ml_pred, ml_conf, oi_metrics)
             if should_exit:
                 from trading_engine import log_trade
                 if AUTO_TRADING_ENABLED and pos:

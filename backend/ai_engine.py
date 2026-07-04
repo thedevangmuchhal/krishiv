@@ -1343,6 +1343,7 @@ def generate_signals(ticker="^NSEI"):
         "greeks":   oi_metrics['greeks']   if oi_metrics else None,
         "total_ce_vol": oi_metrics['total_ce_vol'] if oi_metrics else None,
         "total_pe_vol": oi_metrics['total_pe_vol'] if oi_metrics else None,
+        "raw_oi_metrics": oi_metrics,
         "atm_ce_ltp": atm_ce_ltp, "atm_pe_ltp": atm_pe_ltp,
         "atm_strike": atm_strike,
         # ── Action ────────────────────────────────────────────────────────
@@ -1499,8 +1500,24 @@ def generate_signals(ticker="^NSEI"):
             pass
             
         atr = tech_data.get("atr", 30)
-        idx_target = current_price + (atr * 2.5) if is_bullish else current_price - (atr * 2.5)
-        idx_sl = current_price - (atr * 1.5) if is_bullish else current_price + (atr * 1.5)
+        
+        # Hybrid Target logic
+        if is_bullish:
+            base_target = current_price + (atr * 2.5)
+            idx_target = base_target
+            if oi_metrics and oi_metrics.get("highest_ce_strike"):
+                ce_res = float(oi_metrics["highest_ce_strike"])
+                if ce_res > base_target:
+                    idx_target = ce_res
+            idx_sl = current_price - (atr * 1.5)
+        else:
+            base_target = current_price - (atr * 2.5)
+            idx_target = base_target
+            if oi_metrics and oi_metrics.get("highest_pe_strike"):
+                pe_sup = float(oi_metrics["highest_pe_strike"])
+                if pe_sup > 0 and pe_sup < base_target:
+                    idx_target = pe_sup
+            idx_sl = current_price + (atr * 1.5)
         
         # Calculate Option target and SL based on ~0.5 delta
         index_target_dist = abs(idx_target - current_price)

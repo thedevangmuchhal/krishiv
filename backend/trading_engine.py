@@ -292,11 +292,13 @@ def square_off():
         print(f"[Trading Engine] Square-off Failed: {e}")
         return False, str(e)
 
-def check_exit_conditions(pos_dict: dict, current_index_price: float, ml_prediction: str = "WAIT", ml_confidence: float = 0):
+def check_exit_conditions(pos_dict: dict, current_index_price: float, ml_prediction: str = "WAIT", ml_confidence: float = 0, oi_metrics: dict = None):
     """
     Evaluates whether an open position should be exited based on:
-    1. Stop-Loss: 2x ATR breach (matches backtest logic exactly)
-    2. ML Reversal: ML model flips direction with >60% confidence
+    1. Dynamic Target: Hybrid of 2.5x ATR and OI Resistance/Support.
+    2. Stop-Loss: 1.5x ATR breach (matches backtest logic exactly).
+    3. Trailing Stop: 50% from peak profit.
+    4. ML Reversal: ML model flips direction with >60% confidence.
     Returns: (should_exit: bool, reason: str, pnl_pct: float)
     """
     if not pos_dict:
@@ -322,7 +324,39 @@ def check_exit_conditions(pos_dict: dict, current_index_price: float, ml_predict
         pos_dict["best_pnl_pct"] = pnl_pct
         best_pnl = pnl_pct
         
-    # 1. TRAILING STOP-LOSS CHECK: 50% Trailing
+    # 1. HYBRID TARGET CHECK
+    # Base ATR target is 2.5x ATR
+    if direction == "BUY":
+        base_target = entry_price + (atr * 2.5)
+        # For CE, target is max of Base Target and CE OI Resistance
+        active_target = base_target
+        if oi_metrics and "highest_ce_oi" in oi_metrics:
+            oi_res = float(oi_metrics["highest_ce_oi"]["strike"])
+            # Only use OI if it gives us MORE profit
+            if oi_res > base_target:
+                active_target = oi_res
+        
+        if current_index_price >= active_target:
+            reason = f"🎯 HYBRID TARGET HIT: Index reached {current_index_price} (Target: {active_target}). Locked in max profit."
+            print(f"[Risk Manager] {reason}")
+            return True, reason, pnl_pct
+            
+    else: # SELL / PE
+        base_target = entry_price - (atr * 2.5)
+        # For PE, target is min of Base Target and PE OI Support
+        active_target = base_target
+        if oi_metrics and "highest_pe_oi" in oi_metrics:
+            oi_sup = float(oi_metrics["highest_pe_oi"]["strike"])
+            # Only use OI if it gives us MORE profit (lower index price for PE)
+            if oi_sup < base_target:
+                active_target = oi_sup
+                
+        if current_index_price <= active_target:
+            reason = f"🎯 HYBRID TARGET HIT: Index reached {current_index_price} (Target: {active_target}). Locked in max profit."
+            print(f"[Risk Manager] {reason}")
+            return True, reason, pnl_pct
+        
+    # 2. TRAILING STOP-LOSS CHECK: 50% Trailing
     if best_pnl > 0.001:
         trail_threshold = best_pnl * 0.5
         if pnl_pct < trail_threshold:
@@ -331,8 +365,8 @@ def check_exit_conditions(pos_dict: dict, current_index_price: float, ml_predict
             print(f"[Risk Manager] {reason}")
             return True, reason, pnl_pct
     
-    # 2. FIXED STOP-LOSS CHECK: 2x ATR
-    stop_loss_pct = 2.0 * atr / entry_price
+    # 3. FIXED STOP-LOSS CHECK: 1.5x ATR (Updated to 1.5x from 2x for tighter risk)
+    stop_loss_pct = 1.5 * atr / entry_price
     if pnl_pct < -stop_loss_pct:
         reason = (f"🛑 STOP-LOSS HIT: Index moved {pnl_pct*100:.2f}% against us "
                   f"(SL threshold: {-stop_loss_pct*100:.2f}%). Entry: {entry_price}, Now: {current_index_price}")
