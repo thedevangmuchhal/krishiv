@@ -1499,7 +1499,7 @@ def generate_signals(ticker="^NSEI"):
             pass
             
         atr = tech_data.get("atr", 30)
-        idx_target = expected_move_high if is_bullish else expected_move_low
+        idx_target = current_price + (atr * 2.5) if is_bullish else current_price - (atr * 2.5)
         idx_sl = current_price - (atr * 1.5) if is_bullish else current_price + (atr * 1.5)
         
         # Calculate Option target and SL based on ~0.5 delta
@@ -1511,6 +1511,23 @@ def generate_signals(ticker="^NSEI"):
         
         conf_str = active_signal["reason"].split(" ")[-1] if "Legacy" not in active_signal["reason"] else "99%"
         
+        # Track first detected time
+        global _first_detected_signals
+        if '_first_detected_signals' not in globals():
+            _first_detected_signals = {}
+            
+        current_date_str = datetime.now().strftime("%d %b %Y, %I:%M %p")
+        
+        if strike_val not in _first_detected_signals:
+            _first_detected_signals[strike_val] = current_date_str
+            
+        first_detected = _first_detected_signals[strike_val]
+        
+        # Clear old signals that don't match the current active strike
+        keys_to_delete = [k for k in _first_detected_signals.keys() if k != strike_val]
+        for k in keys_to_delete:
+            del _first_detected_signals[k]
+        
         trade_card = {
             "Entry": strike_val,
             "Price": f"{int(opt_price - 5)} to {int(opt_price + 5)}",
@@ -1519,6 +1536,7 @@ def generate_signals(ticker="^NSEI"):
             "SL": round(idx_sl, 2),
             "SL_Price": opt_sl,
             "Confidence_Level": conf_str,
+            "First_Detected": first_detected,
             "Last_Backtested": "04.07.2026"
         }
     
