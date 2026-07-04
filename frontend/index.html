@@ -3322,7 +3322,7 @@
                             
                             const atr = 30;
                             const currentPrice = data.current_price || 24000;
-                            const idxTarget = isBullish ? currentPrice + (atr * 1.5) : currentPrice - (atr * 1.5);
+                            const idxTarget = isBullish ? currentPrice + (atr * 2.5) : currentPrice - (atr * 2.5);
                             const idxSl = isBullish ? currentPrice - (atr * 1.5) : currentPrice + (atr * 1.5);
                             
                             const optTarget = Math.floor(optPrice + (Math.abs(idxTarget - currentPrice) * 0.5));
