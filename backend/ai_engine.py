@@ -1191,11 +1191,13 @@ def generate_signals(ticker="^NSEI"):
             target = entry + atr * 1.5
             stop_loss = entry - atr * 1.0
         else:
-            target = (oi_metrics['highest_ce_strike']
-                      if oi_metrics and oi_metrics.get('highest_ce_strike', 0) > entry
-                      else entry + atr * 3.0)
-            hp = oi_metrics.get('highest_pe_strike', 0) if oi_metrics else 0
-            stop_loss = max(hp, entry - atr * 2.0) if hp > 0 and hp < entry else entry - atr * 1.5
+            base_target = entry + atr * 2.5
+            target = base_target
+            if oi_metrics and oi_metrics.get('highest_ce_strike'):
+                ce_res = float(oi_metrics['highest_ce_strike'])
+                if ce_res > base_target:
+                    target = ce_res
+            stop_loss = entry - atr * 1.5
             
     elif action == "SELL":
         if strike_greeks:
@@ -1209,11 +1211,13 @@ def generate_signals(ticker="^NSEI"):
             target = entry - atr * 1.5
             stop_loss = entry + atr * 1.0
         else:
-            hp = oi_metrics.get('highest_pe_strike', 0) if oi_metrics else 0
-            target = hp if hp > 0 and hp < entry else entry - atr * 3.0
-            hc = oi_metrics.get('highest_ce_strike', 0) if oi_metrics else 0
-            stop_loss = min(hc, entry + atr * 2.0) if hc > entry else entry + atr * 1.5
-            
+            base_target = entry - atr * 2.5
+            target = base_target
+            if oi_metrics and oi_metrics.get('highest_pe_strike'):
+                pe_sup = float(oi_metrics['highest_pe_strike'])
+                if pe_sup > 0 and pe_sup < base_target:
+                    target = pe_sup
+            stop_loss = entry + atr * 1.5
     else:
         sp = atm_strike; entry = stop_loss = target = 0
 
